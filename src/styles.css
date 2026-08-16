@@ -47,6 +47,10 @@
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
   --color-chart-1: var(--chart-1);
+  --color-normal: var(--normal);
+  --color-mci: var(--mci);
+  --color-dementia: var(--dementia);
+  --color-grid: var(--grid);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
