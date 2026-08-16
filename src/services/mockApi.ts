@@ -108,7 +108,10 @@ function makeAnalysis(
   seedValue: number,
 ): Analysis {
   const r = rand(seedValue);
-  const [n, m, d] = probsFor(label, r);
+  const p = probsFor(label, r);
+  const n = p[0] ?? 0.34;
+  const m = p[1] ?? 0.33;
+  const d = p[2] ?? 0.33;
   const g = GATE_WEIGHTS[label];
   const jitter = (v: number) => Math.min(0.999, Math.max(0.01, v + (r() - 0.5) * 0.05));
   return {
@@ -310,7 +313,7 @@ export function uploadAndAnalyse(input: {
   input.onStatus?.("PROCESSING", pending.id);
 
   window.setTimeout(() => {
-    const label = CLASSES[Math.floor(Math.random() * 3)];
+    const label = CLASSES[Math.floor(Math.random() * 3)] ?? "Normal";
     const finished = makeAnalysis(patient.id, recording.id, label, pending.createdAt, Date.now() % 9000);
     db.analyses = db.analyses.map((a) => (a.id === pending.id ? { ...finished, id: pending.id } : a));
     db.recordings = db.recordings.map((r) =>
