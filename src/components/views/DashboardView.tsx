@@ -1,4 +1,3 @@
-<<<<<<<
 import { Link } from "@tanstack/react-router";
 import {
   Bar,
@@ -242,4 +241,3 @@ function buildTrend() {
   });
   return [...buckets.entries()].map(([week, count]) => ({ week, count })).reverse();
 }
->>>>>>>
