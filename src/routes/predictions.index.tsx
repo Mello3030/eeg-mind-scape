@@ -5,7 +5,7 @@ import { ClassBadge, EmptyState, Panel, StatusBadge, fmtDate } from "@/component
 import { CLASSES, pct, type ClassLabel } from "@/lib/qsfe";
 import { getPatient, listAnalyses, useDb } from "@/services/mockApi";
 
-export const Route = createFileRoute("/predictions")({
+export const Route = createFileRoute("/predictions/")({
   head: () => ({
     meta: [
       { title: "Predictions — QSFE-Net Analysis History" },
