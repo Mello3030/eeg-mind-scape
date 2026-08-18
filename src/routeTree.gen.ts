@@ -10,11 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AnalysisRouteImport } from './routes/analysis'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ModelRouteImport } from './routes/model'
+import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as PatientsIndexRouteImport } from './routes/patients.index'
 import { Route as PatientsIdRouteImport } from './routes/patients.$id'
@@ -24,6 +27,11 @@ import { Route as PredictionsIdRouteImport } from './routes/predictions.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalysisRoute = AnalysisRouteImport.update({
@@ -46,9 +54,19 @@ const ModelRoute = ModelRouteImport.update({
   path: '/model',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PerformanceRoute = PerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UploadRoute = UploadRouteImport.update({
@@ -79,11 +97,14 @@ const PredictionsIdRoute = PredictionsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/analysis': typeof AnalysisRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/model': typeof ModelRoute
+  '/performance': typeof PerformanceRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
   '/upload': typeof UploadRoute
   '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
@@ -92,11 +113,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/analysis': typeof AnalysisRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/model': typeof ModelRoute
+  '/performance': typeof PerformanceRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
   '/upload': typeof UploadRoute
   '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
@@ -106,11 +130,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/analysis': typeof AnalysisRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/model': typeof ModelRoute
+  '/performance': typeof PerformanceRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
   '/upload': typeof UploadRoute
   '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
@@ -121,11 +148,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/analysis'
     | '/dashboard'
     | '/login'
     | '/model'
+    | '/performance'
     | '/register'
+    | '/settings'
     | '/upload'
     | '/patients/$id'
     | '/predictions/$id'
@@ -134,11 +164,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/analysis'
     | '/dashboard'
     | '/login'
     | '/model'
+    | '/performance'
     | '/register'
+    | '/settings'
     | '/upload'
     | '/patients/$id'
     | '/predictions/$id'
@@ -147,11 +180,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/analysis'
     | '/dashboard'
     | '/login'
     | '/model'
+    | '/performance'
     | '/register'
+    | '/settings'
     | '/upload'
     | '/patients/$id'
     | '/predictions/$id'
@@ -161,11 +197,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   AnalysisRoute: typeof AnalysisRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   ModelRoute: typeof ModelRoute
+  PerformanceRoute: typeof PerformanceRoute
   RegisterRoute: typeof RegisterRoute
+  SettingsRoute: typeof SettingsRoute
   UploadRoute: typeof UploadRoute
   PatientsIdRoute: typeof PatientsIdRoute
   PredictionsIdRoute: typeof PredictionsIdRoute
@@ -180,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analysis': {
@@ -210,11 +256,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModelRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/performance': {
+      id: '/performance'
+      path: '/performance'
+      fullPath: '/performance'
+      preLoaderRoute: typeof PerformanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/upload': {
@@ -257,11 +317,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   AnalysisRoute: AnalysisRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   ModelRoute: ModelRoute,
+  PerformanceRoute: PerformanceRoute,
   RegisterRoute: RegisterRoute,
+  SettingsRoute: SettingsRoute,
   UploadRoute: UploadRoute,
   PatientsIdRoute: PatientsIdRoute,
   PredictionsIdRoute: PredictionsIdRoute,
