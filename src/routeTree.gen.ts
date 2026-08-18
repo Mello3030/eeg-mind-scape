@@ -14,6 +14,8 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as PatientsIndexRouteImport } from './routes/patients.index'
+import { Route as PatientsIdRouteImport } from './routes/patients.$id'
 import { Route as PredictionsIndexRouteImport } from './routes/predictions.index'
 import { Route as PredictionsIdRouteImport } from './routes/predictions.$id'
 
@@ -42,6 +44,16 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PatientsIndexRoute = PatientsIndexRouteImport.update({
+  id: '/patients/',
+  path: '/patients/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientsIdRoute = PatientsIdRouteImport.update({
+  id: '/patients/$id',
+  path: '/patients/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PredictionsIndexRoute = PredictionsIndexRouteImport.update({
   id: '/predictions/',
   path: '/predictions/',
@@ -59,7 +71,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/upload': typeof UploadRoute
+  '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
+  '/patients/': typeof PatientsIndexRoute
   '/predictions/': typeof PredictionsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -68,7 +82,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/upload': typeof UploadRoute
+  '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
+  '/patients': typeof PatientsIndexRoute
   '/predictions': typeof PredictionsIndexRoute
 }
 export interface FileRoutesById {
@@ -78,7 +94,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/upload': typeof UploadRoute
+  '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
+  '/patients/': typeof PatientsIndexRoute
   '/predictions/': typeof PredictionsIndexRoute
 }
 export interface FileRouteTypes {
@@ -89,7 +107,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/upload'
+    | '/patients/$id'
     | '/predictions/$id'
+    | '/patients/'
     | '/predictions/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -98,7 +118,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/upload'
+    | '/patients/$id'
     | '/predictions/$id'
+    | '/patients'
     | '/predictions'
   id:
     | '__root__'
@@ -107,7 +129,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/upload'
+    | '/patients/$id'
     | '/predictions/$id'
+    | '/patients/'
     | '/predictions/'
   fileRoutesById: FileRoutesById
 }
@@ -117,7 +141,9 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   UploadRoute: typeof UploadRoute
+  PatientsIdRoute: typeof PatientsIdRoute
   PredictionsIdRoute: typeof PredictionsIdRoute
+  PatientsIndexRoute: typeof PatientsIndexRoute
   PredictionsIndexRoute: typeof PredictionsIndexRoute
 }
 
@@ -158,6 +184,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/patients/': {
+      id: '/patients/'
+      path: '/patients'
+      fullPath: '/patients/'
+      preLoaderRoute: typeof PatientsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patients/$id': {
+      id: '/patients/$id'
+      path: '/patients/$id'
+      fullPath: '/patients/$id'
+      preLoaderRoute: typeof PatientsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/predictions/': {
       id: '/predictions/'
       path: '/predictions'
@@ -181,7 +221,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   UploadRoute: UploadRoute,
+  PatientsIdRoute: PatientsIdRoute,
   PredictionsIdRoute: PredictionsIdRoute,
+  PatientsIndexRoute: PatientsIndexRoute,
   PredictionsIndexRoute: PredictionsIndexRoute,
 }
 export const routeTree = rootRouteImport
