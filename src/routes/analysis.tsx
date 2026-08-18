@@ -177,7 +177,7 @@ function AnalysisPage() {
                 <XAxis dataKey="cls" stroke="var(--muted-foreground)" fontSize={11} />
                 <YAxis stroke="var(--muted-foreground)" fontSize={11} />
                 <Tooltip formatter={(v: number) => v.toFixed(3)} contentStyle={tooltipStyle} />
-                <Bar dataKey="mean" name="mean" radius={[2, 2, 0, 0]}>
+                <Bar isAnimationActive={false} dataKey="mean" name="mean" radius={[2, 2, 0, 0]}>
                   {statsByClass.map((r) => (
                     <Cell key={r.cls} fill={classColor(r.cls as "Normal")} />
                   ))}

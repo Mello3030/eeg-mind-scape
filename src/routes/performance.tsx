@@ -68,8 +68,8 @@ function PerformancePage() {
                 <YAxis domain={[0.3, 0.7]} stroke="var(--muted-foreground)" fontSize={11} />
                 <Tooltip formatter={(v: number) => pct(v, 2)} contentStyle={tooltipStyle} />
                 <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="trainAcc" name="train acc" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="valAcc" name="val acc" stroke="var(--chart-2)" strokeWidth={2} dot={false} />
+                <Line isAnimationActive={false} type="monotone" dataKey="trainAcc" name="train acc" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
+                <Line isAnimationActive={false} type="monotone" dataKey="valAcc" name="val acc" stroke="var(--chart-2)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -84,8 +84,8 @@ function PerformancePage() {
                 <YAxis domain={[0.85, 1.12]} stroke="var(--muted-foreground)" fontSize={11} />
                 <Tooltip formatter={(v: number) => v.toFixed(3)} contentStyle={tooltipStyle} />
                 <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="trainLoss" name="train loss" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="valLoss" name="val loss" stroke="var(--chart-4)" strokeWidth={2} dot={false} />
+                <Line isAnimationActive={false} type="monotone" dataKey="trainLoss" name="train loss" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
+                <Line isAnimationActive={false} type="monotone" dataKey="valLoss" name="val loss" stroke="var(--chart-4)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -144,9 +144,9 @@ function PerformancePage() {
                 <YAxis domain={[0, 1]} stroke="var(--muted-foreground)" fontSize={11} />
                 <Tooltip formatter={(v: number) => v.toFixed(3)} contentStyle={tooltipStyle} />
                 <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="precision" fill="var(--chart-1)" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="recall" fill="var(--chart-2)" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="f1" fill="var(--chart-3)" radius={[2, 2, 0, 0]} />
+                <Bar isAnimationActive={false} dataKey="precision" fill="var(--chart-1)" radius={[2, 2, 0, 0]} />
+                <Bar isAnimationActive={false} dataKey="recall" fill="var(--chart-2)" radius={[2, 2, 0, 0]} />
+                <Bar isAnimationActive={false} dataKey="f1" fill="var(--chart-3)" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -193,7 +193,7 @@ function PerformancePage() {
                 <XAxis dataKey="config" stroke="var(--muted-foreground)" fontSize={10} angle={-25} textAnchor="end" interval={0} />
                 <YAxis domain={[0.35, 0.6]} stroke="var(--muted-foreground)" fontSize={11} />
                 <Tooltip formatter={(v: number) => pct(v)} contentStyle={tooltipStyle} />
-                <Bar dataKey="testAccuracy" name="test accuracy" radius={[2, 2, 0, 0]}>
+                <Bar isAnimationActive={false} dataKey="testAccuracy" name="test accuracy" radius={[2, 2, 0, 0]}>
                   {ABLATION.map((r) => (
                     <Cell
                       key={r.config}
@@ -264,7 +264,7 @@ function PerformancePage() {
                   <XAxis dataKey="model" stroke="var(--muted-foreground)" fontSize={10} />
                   <YAxis domain={[0, 1]} stroke="var(--muted-foreground)" fontSize={11} />
                   <Tooltip formatter={(v: number) => pct(v)} contentStyle={tooltipStyle} />
-                  <Bar dataKey="testAccuracy" name="test accuracy" radius={[2, 2, 0, 0]}>
+                  <Bar isAnimationActive={false} dataKey="testAccuracy" name="test accuracy" radius={[2, 2, 0, 0]}>
                     {BASELINES.map((b) => (
                       <Cell key={b.model} fill={b.ours ? "var(--primary)" : "var(--muted-foreground)"} />
                     ))}

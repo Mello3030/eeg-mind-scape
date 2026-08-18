@@ -123,7 +123,7 @@ function PatientPage() {
                   <Tooltip formatter={(v: number) => pct(v, 1)} contentStyle={tooltipStyle} />
                   <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
                   {CLASSES.map((c) => (
-                    <Line key={c} type="monotone" dataKey={c} stroke={classColor(c)} strokeWidth={2} dot={{ r: 2 }} />
+                    <Line isAnimationActive={false} key={c} type="monotone" dataKey={c} stroke={classColor(c)} strokeWidth={2} dot={{ r: 2 }} />
                   ))}
                 </LineChart>
               </ResponsiveContainer>

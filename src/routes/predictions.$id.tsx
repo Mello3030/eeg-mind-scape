@@ -154,7 +154,7 @@ function ResultPage() {
                 <XAxis dataKey="id" stroke="var(--muted-foreground)" fontSize={11} />
                 <YAxis domain={[0, 1]} stroke="var(--muted-foreground)" fontSize={11} />
                 <Tooltip formatter={(v: number) => v.toFixed(3)} contentStyle={tooltipStyle} />
-                <Bar dataKey="weight" name="gate weight" radius={[2, 2, 0, 0]}>
+                <Bar isAnimationActive={false} dataKey="weight" name="gate weight" radius={[2, 2, 0, 0]}>
                   {gateRows.map((r) => (
                     <Cell key={r.id} fill="var(--primary)" fillOpacity={0.4 + r.weight * 0.6} />
                   ))}
