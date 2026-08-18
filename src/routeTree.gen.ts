@@ -10,16 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AnalysisRouteImport } from './routes/analysis'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ModelRouteImport } from './routes/model'
+import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as PatientsIndexRouteImport } from './routes/patients.index'
+import { Route as PatientsIdRouteImport } from './routes/patients.$id'
 import { Route as PredictionsIndexRouteImport } from './routes/predictions.index'
 import { Route as PredictionsIdRouteImport } from './routes/predictions.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalysisRoute = AnalysisRouteImport.update({
+  id: '/analysis',
+  path: '/analysis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -32,14 +49,39 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModelRoute = ModelRouteImport.update({
+  id: '/model',
+  path: '/model',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerformanceRoute = PerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
   path: '/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientsIndexRoute = PatientsIndexRouteImport.update({
+  id: '/patients/',
+  path: '/patients/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientsIdRoute = PatientsIdRouteImport.update({
+  id: '/patients/$id',
+  path: '/patients/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PredictionsIndexRoute = PredictionsIndexRouteImport.update({
@@ -55,69 +97,118 @@ const PredictionsIdRoute = PredictionsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/analysis': typeof AnalysisRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/model': typeof ModelRoute
+  '/performance': typeof PerformanceRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
   '/upload': typeof UploadRoute
+  '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
+  '/patients/': typeof PatientsIndexRoute
   '/predictions/': typeof PredictionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/analysis': typeof AnalysisRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/model': typeof ModelRoute
+  '/performance': typeof PerformanceRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
   '/upload': typeof UploadRoute
+  '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
+  '/patients': typeof PatientsIndexRoute
   '/predictions': typeof PredictionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/analysis': typeof AnalysisRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/model': typeof ModelRoute
+  '/performance': typeof PerformanceRoute
   '/register': typeof RegisterRoute
+  '/settings': typeof SettingsRoute
   '/upload': typeof UploadRoute
+  '/patients/$id': typeof PatientsIdRoute
   '/predictions/$id': typeof PredictionsIdRoute
+  '/patients/': typeof PatientsIndexRoute
   '/predictions/': typeof PredictionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
+    | '/analysis'
     | '/dashboard'
     | '/login'
+    | '/model'
+    | '/performance'
     | '/register'
+    | '/settings'
     | '/upload'
+    | '/patients/$id'
     | '/predictions/$id'
+    | '/patients/'
     | '/predictions/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
+    | '/analysis'
     | '/dashboard'
     | '/login'
+    | '/model'
+    | '/performance'
     | '/register'
+    | '/settings'
     | '/upload'
+    | '/patients/$id'
     | '/predictions/$id'
+    | '/patients'
     | '/predictions'
   id:
     | '__root__'
     | '/'
+    | '/about'
+    | '/analysis'
     | '/dashboard'
     | '/login'
+    | '/model'
+    | '/performance'
     | '/register'
+    | '/settings'
     | '/upload'
+    | '/patients/$id'
     | '/predictions/$id'
+    | '/patients/'
     | '/predictions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  AnalysisRoute: typeof AnalysisRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  ModelRoute: typeof ModelRoute
+  PerformanceRoute: typeof PerformanceRoute
   RegisterRoute: typeof RegisterRoute
+  SettingsRoute: typeof SettingsRoute
   UploadRoute: typeof UploadRoute
+  PatientsIdRoute: typeof PatientsIdRoute
   PredictionsIdRoute: typeof PredictionsIdRoute
+  PatientsIndexRoute: typeof PatientsIndexRoute
   PredictionsIndexRoute: typeof PredictionsIndexRoute
 }
 
@@ -128,6 +219,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analysis': {
+      id: '/analysis'
+      path: '/analysis'
+      fullPath: '/analysis'
+      preLoaderRoute: typeof AnalysisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -144,6 +249,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/model': {
+      id: '/model'
+      path: '/model'
+      fullPath: '/model'
+      preLoaderRoute: typeof ModelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/performance': {
+      id: '/performance'
+      path: '/performance'
+      fullPath: '/performance'
+      preLoaderRoute: typeof PerformanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -151,11 +270,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upload': {
       id: '/upload'
       path: '/upload'
       fullPath: '/upload'
       preLoaderRoute: typeof UploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patients/': {
+      id: '/patients/'
+      path: '/patients'
+      fullPath: '/patients/'
+      preLoaderRoute: typeof PatientsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patients/$id': {
+      id: '/patients/$id'
+      path: '/patients/$id'
+      fullPath: '/patients/$id'
+      preLoaderRoute: typeof PatientsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/predictions/': {
@@ -177,11 +317,18 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  AnalysisRoute: AnalysisRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  ModelRoute: ModelRoute,
+  PerformanceRoute: PerformanceRoute,
   RegisterRoute: RegisterRoute,
+  SettingsRoute: SettingsRoute,
   UploadRoute: UploadRoute,
+  PatientsIdRoute: PatientsIdRoute,
   PredictionsIdRoute: PredictionsIdRoute,
+  PatientsIndexRoute: PatientsIndexRoute,
   PredictionsIndexRoute: PredictionsIndexRoute,
 }
 export const routeTree = rootRouteImport

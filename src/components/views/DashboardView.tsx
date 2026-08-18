@@ -68,7 +68,7 @@ export function DashboardView() {
                 <XAxis dataKey="name" {...axis} />
                 <YAxis allowDecimals={false} {...axis} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="value" name="analyses" radius={[2, 2, 0, 0]}>
+                <Bar isAnimationActive={false} dataKey="value" name="analyses" radius={[2, 2, 0, 0]}>
                   {data.stats.distribution.map((d) => (
                     <Cell key={d.name} fill={classColor(d.name)} />
                   ))}
@@ -93,7 +93,7 @@ export function DashboardView() {
                 <XAxis dataKey="metric" {...axis} />
                 <YAxis domain={[0, 1]} tickFormatter={(v) => v.toFixed(1)} {...axis} />
                 <Tooltip formatter={(v: number) => pct(v)} contentStyle={tooltipStyle} />
-                <Bar dataKey="value" fill="var(--primary)" radius={[2, 2, 0, 0]} />
+                <Bar isAnimationActive={false} dataKey="value" fill="var(--primary)" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -137,7 +137,7 @@ export function DashboardView() {
                 <Tooltip formatter={(v: number) => v.toFixed(3)} contentStyle={tooltipStyle} />
                 <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
                 {CLASSES.map((c) => (
-                  <Bar key={c} dataKey={c} fill={classColor(c)} radius={[2, 2, 0, 0]} />
+                  <Bar isAnimationActive={false} key={c} dataKey={c} fill={classColor(c)} radius={[2, 2, 0, 0]} />
                 ))}
               </BarChart>
             </ResponsiveContainer>

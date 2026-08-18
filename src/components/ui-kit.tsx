@@ -40,8 +40,8 @@ export function Kpi({
 }: {
   label: string;
   value: string | number;
-  sub?: string;
-  tone?: ClassLabel | "primary";
+  sub?: string | undefined;
+  tone?: ClassLabel | "primary" | undefined;
 }) {
   const color =
     tone && tone !== "primary" ? classColor(tone) : tone === "primary" ? "var(--primary)" : undefined;
