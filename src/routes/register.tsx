@@ -7,7 +7,10 @@ export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
       { title: "Register — QSFE-Net Research Platform" },
-      { name: "description", content: "Create a researcher or administrator account on the QSFE-Net platform." },
+      {
+        name: "description",
+        content: "Create a researcher or administrator account on the QSFE-Net platform.",
+      },
       { property: "og:title", content: "Register — QSFE-Net Research Platform" },
       { property: "og:description", content: "Create a QSFE-Net research workspace account." },
     ],
@@ -25,7 +28,10 @@ function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <AuthLayout title="Create account" subtitle="Roles: researcher (analysis) or administrator (full access)">
+    <AuthLayout
+      title="Create account"
+      subtitle="Roles: researcher (analysis) or administrator (full access)"
+    >
       <form
         className="space-y-3"
         onSubmit={async (e) => {
@@ -42,12 +48,13 @@ function RegisterPage() {
         <Field label="Full name" value={name} onChange={setName} />
         <Field label="Email" value={email} onChange={setEmail} type="email" />
         <Field label="Password" value={password} onChange={setPassword} type="password" />
+        <p className="-mt-1 text-[11px] text-muted-foreground">At least 8 characters.</p>
         <label className="block">
           <span className="label-xs">Role</span>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as Role)}
-            className="mt-1 w-full rounded border border-input bg-card px-2.5 py-1.5 text-xs"
+            className="mt-1.5 w-full rounded-control border border-input bg-card px-3 py-2 text-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
           >
             <option value="researcher">researcher</option>
             <option value="administrator">administrator</option>
@@ -56,7 +63,7 @@ function RegisterPage() {
         {error && <p className="text-[11px] text-destructive">{error}</p>}
         <button
           type="submit"
-          className="w-full rounded bg-primary px-3 py-2 text-xs font-medium text-primary-foreground"
+          className="w-full rounded-control bg-primary px-3 py-2 text-xs font-medium text-primary-foreground"
         >
           Create account
         </button>

@@ -63,29 +63,42 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* Editorial additions: a structural rule colour distinct from the hairline
+     border, and a paper tone for layered surfaces. */
+  --color-border-strong: var(--border-strong);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --radius-control: var(--radius-control);
 }
 
 :root {
-  --radius: 0.375rem;
-  --background: oklch(0.995 0.002 250);
-  --foreground: oklch(0.24 0.03 258);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.03 258);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.03 258);
-  --primary: oklch(0.45 0.13 254);
-  --primary-foreground: oklch(0.99 0.005 250);
-  --secondary: oklch(0.96 0.008 250);
-  --secondary-foreground: oklch(0.3 0.03 258);
-  --muted: oklch(0.966 0.006 250);
-  --muted-foreground: oklch(0.52 0.02 256);
-  --accent: oklch(0.94 0.03 245);
-  --accent-foreground: oklch(0.32 0.08 254);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.99 0.005 250);
-  --border: oklch(0.9 0.01 252);
-  --input: oklch(0.9 0.01 252);
-  --ring: oklch(0.55 0.11 254);
+  /* Structural containers are near-square; only controls get a real radius.
+     This is what keeps the layout architectural rather than card-like. */
+  --radius: 0.125rem;
+  --radius-control: 0.375rem;
+
+  --background: oklch(0.972 0.006 85);
+  --foreground: oklch(0.17 0.012 260);
+  --card: oklch(0.995 0.003 85);
+  --card-foreground: oklch(0.17 0.012 260);
+  --surface: oklch(0.955 0.007 85);
+  --surface-sunken: oklch(0.935 0.008 85);
+  --popover: oklch(0.995 0.003 85);
+  --popover-foreground: oklch(0.17 0.012 260);
+  --primary: oklch(0.42 0.14 254);
+  --primary-foreground: oklch(0.99 0.004 85);
+  --secondary: oklch(0.945 0.007 85);
+  --secondary-foreground: oklch(0.28 0.02 260);
+  --muted: oklch(0.95 0.006 85);
+  --muted-foreground: oklch(0.48 0.015 260);
+  --accent: oklch(0.93 0.03 245);
+  --accent-foreground: oklch(0.3 0.08 254);
+  --destructive: oklch(0.53 0.2 25);
+  --destructive-foreground: oklch(0.99 0.004 85);
+  --border: oklch(0.86 0.008 90);
+  --border-strong: oklch(0.22 0.012 260);
+  --input: oklch(0.84 0.009 90);
+  --ring: oklch(0.42 0.14 254);
   --normal: oklch(0.58 0.11 175);
   --mci: oklch(0.72 0.15 75);
   --dementia: oklch(0.55 0.19 22);
@@ -94,15 +107,15 @@
   --chart-3: oklch(0.72 0.15 75);
   --chart-4: oklch(0.55 0.19 22);
   --chart-5: oklch(0.5 0.1 300);
-  --grid: oklch(0.92 0.008 252);
-  --sidebar: oklch(0.22 0.03 258);
-  --sidebar-foreground: oklch(0.86 0.01 250);
-  --sidebar-primary: oklch(0.62 0.14 250);
-  --sidebar-primary-foreground: oklch(0.99 0.005 250);
-  --sidebar-accent: oklch(0.29 0.035 258);
-  --sidebar-accent-foreground: oklch(0.98 0.005 250);
-  --sidebar-border: oklch(0.32 0.03 258);
-  --sidebar-ring: oklch(0.62 0.14 250);
+  --grid: oklch(0.9 0.008 88);
+  --sidebar: oklch(0.165 0.012 262);
+  --sidebar-foreground: oklch(0.82 0.008 85);
+  --sidebar-primary: oklch(0.66 0.15 250);
+  --sidebar-primary-foreground: oklch(0.13 0.01 262);
+  --sidebar-accent: oklch(0.245 0.014 262);
+  --sidebar-accent-foreground: oklch(0.98 0.004 85);
+  --sidebar-border: oklch(0.28 0.012 262);
+  --sidebar-ring: oklch(0.66 0.15 250);
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
@@ -124,7 +137,10 @@
   --accent-foreground: oklch(0.984 0.003 247.858);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
+  --border: oklch(1 0 0 / 12%);
+  --border-strong: oklch(1 0 0 / 34%);
+  --surface: oklch(0.238 0.042 265.755);
+  --surface-sunken: oklch(0.172 0.042 264.695);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.551 0.027 264.364);
   --chart-1: oklch(0.488 0.243 264.376);
@@ -172,10 +188,79 @@
   border-radius: var(--radius);
 }
 
+/* Structural container. The heavier rule is what reads as "editorial" rather
+   than "card" — reserve it for major sections, not every box. */
+@utility panel-strong {
+  background-color: var(--color-card);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+@utility surface {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* Oversized page title. Clamped so it establishes hierarchy on desktop without
+   swallowing the viewport on a phone. */
+@utility display-1 {
+  font-size: clamp(1.75rem, 3.4vw, 2.75rem);
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+@utility display-2 {
+  font-size: clamp(1.15rem, 1.6vw, 1.5rem);
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+/* Section heading in the editorial register: small, uppercase, tracked, sitting
+   on a rule. Pairs with label-xs for metadata. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-foreground);
+}
+
 @utility label-xs {
   font-size: 0.6875rem;
   line-height: 1rem;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-muted-foreground);
+}
+
+/* Tabular figures at display size, for KPI values. */
+@utility stat {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.35rem, 1.9vw, 1.75rem);
+  line-height: 1.1;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@utility panel-in {
+  animation: panel-in 0.24s ease-out both;
 }

@@ -1,0 +1,28 @@
+# Optional local Postgres, for working without Neon.
+# The default setup needs no database service at all - the API stores everything
+# in SQLite at ML/backend/storage/qsfe.db. Start this only if you want Postgres,
+# then point the API at it in ML/backend/.env:
+#   docker compose --profile local up -d postgres
+#   QSFE_DATABASE_URL=postgresql+psycopg2://qsfe:qsfe@localhost:5432/qsfe
+#   QSFE_DB_SCHEMA=qsfe
+services:
+  postgres:
+    profiles: ["local"]
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qsfe
+      POSTGRES_PASSWORD: qsfe
+      POSTGRES_DB: qsfe
+    ports:
+      - "5432:5432"
+    volumes:
+      - qsfe_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qsfe"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  qsfe_postgres_data:

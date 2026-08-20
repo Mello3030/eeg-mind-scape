@@ -5,43 +5,139 @@
 > Research prototype — **not for clinical diagnosis**. Every output is a *model
 > prediction*, never a confirmed diagnosis.
 
-## What this repository contains
+## Architecture
 
-This is the **frontend application** (React 19 + Vite + TanStack Router,
-Tailwind CSS, shadcn/ui, Recharts, Lucide, TanStack Query). It implements the
-complete research-dashboard product surface and runs standalone against a local
-mock API layer, so the whole workflow is usable before the Node/Python services
-are attached.
+Two tiers. The React frontend talks directly to one FastAPI backend, which owns
+inference, storage, and accounts.
+
+```
+src/                    React 19, Vite, TanStack Router + Query, Tailwind, Recharts
+  └── services/api.ts   the only module that knows the wire format
+        │  HTTP (VITE_API_URL, default http://localhost:8000)
+        ▼
+ML/backend/             FastAPI
+  ├── app/              inference: EDF → features → QSFE-Net → gates + biomarkers
+  └── api/              accounts, patients, uploads, history, reports (SQLAlchemy)
+        │
+        ├── ML/src/         research code, loaded by file path — never mutated
+        ├── ML/outputs/     checkpoints (.pth) + ablation results
+        └── ML/caueeg-dataset/  annotations, EDF signals, cached feature crops
+```
+
+There is no mock mode. If no checkpoint loads, scoring returns 503 rather than a
+placeholder, and the UI says so.
 
 | Route | Purpose |
 | --- | --- |
-| `/login`, `/register` | Demo auth (researcher / administrator roles) |
-| `/dashboard` (and `/`) | KPI cards, distribution, gate weights, recent analyses |
-| `/patients`, `/patients/:id` | Cohort registry, recordings, probability & gate history |
-| `/upload` | Drag-and-drop EDF upload, validation, UPLOAD → PROCESSING → COMPLETED |
+| `/login`, `/register` | JWT auth (researcher / administrator roles) |
+| `/dashboard` (and `/`) | KPIs, distribution, measured gate weights, recent analyses |
+| `/patients`, `/patients/:id` | Cohort registry, source recordings, probability & gate history |
+| `/upload` | Drag-and-drop EDF upload; scoring is synchronous |
 | `/predictions`, `/predictions/:id` | History and the full interpretability report |
-| `/analysis` | 19-channel EEG viewer + four feature-stream tabs |
-| `/model` | Interactive architecture diagram + gate analysis |
-| `/performance` | Curves, confusion matrix, per-class metrics, ablation, baselines |
-| `/about`, `/settings` | Scientific background, limitations, environment config |
+| `/analysis` | EEG viewer reading the real EDF + per-stream decoded biomarkers |
+| `/model` | Architecture diagram + measured gate analysis |
+| `/performance` | Confusion matrix, per-class metrics, ablation, baselines |
+| `/about`, `/settings` | Background, limitations, checkpoint switching, environment |
 
-## Model summary (Run 8, CAUEEG)
+## Running it
+
+Two processes.
+
+```bash
+# 1. API  (needs torch, scipy, pyEDFlib — see ML/backend/requirements.txt)
+cd ML
+pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env     # optional; every value has a default
+python backend/scripts/seed.py --cohort 9   # demo accounts + real scored cohort
+python backend/run.py --reload              # http://127.0.0.1:8000  (/docs for OpenAPI)
+
+# 2. Frontend
+npm install
+cp .env.example .env
+npm run dev                                 # http://localhost:8080
+```
+
+Demo accounts from the seed: `researcher@qsfe.lab` and `admin@qsfe.lab`,
+password `research123`. `--cohort N` scores N real CAUEEG test patients so the
+dashboard opens with genuine predictions and known ground truth.
+
+### Database
+
+SQLite by default (`ML/backend/storage/qsfe.db`) — no external service needed.
+
+For Postgres/Neon, set `QSFE_DATABASE_URL` in `ML/backend/.env`. Note this is a
+**SQLAlchemy** URL, not a Prisma one: libpq rejects unknown keywords, so drop
+Prisma's `pgbouncer=true` and `schema=` parameters and set the schema with
+`QSFE_DB_SCHEMA` instead:
+
+```
+QSFE_DATABASE_URL=postgresql+psycopg2://USER:PASS@ep-xxxx-pooler.REGION.aws.neon.tech/DB?sslmode=require
+QSFE_DB_SCHEMA=qsfe
+```
+
+`QSFE_DB_SCHEMA` confines every table to one Postgres schema, so this project
+cannot collide with unrelated tables in a shared database. The schema is created
+on startup if missing.
+
+### Auth
+
+Passwords are hashed with Argon2id; sessions are stateless HS256 JWTs. **Set
+`QSFE_JWT_SECRET`** before exposing the server — without it the app falls back to
+a public development secret and logs a warning at startup.
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+## Where the numbers come from
+
+Nothing in the UI is transcribed. Every figure is either measured on demand or
+parsed from the file the training run wrote:
+
+| Shown | Source |
+| --- | --- |
+| Parameter count, stream dims, device | `/model/info` — read from the loaded checkpoint |
+| Test accuracy, macro F1, confusion matrix, per-class metrics | `/model/performance` — scores the CAUEEG test split with the active checkpoint |
+| Ablation table and finding | `/model/ablation` — parses `outputs/ablation/ablation_results.txt` |
+| Gate activations per class | Averaged over the analyses in the workspace |
+| Biomarkers | Decoded from the feature vectors of each prediction |
+| Waveforms | Read from the source EDF, decimated for display |
+
+Measured performance is cached per checkpoint and recomputed when you switch
+checkpoints from **Settings → Checkpoints**.
+
+### Model summary (`qsfe_npz_best.pth`)
+
+Measured through this server on the 118-patient CAUEEG test split, 5 crops each:
 
 | Metric | Value |
 | --- | --- |
 | Test accuracy | 53.39% |
-| Validation accuracy | 53.78% |
 | Macro F1 | 0.5226 |
 | Trainable parameters | 79,431 |
 
-Feature streams (830 features total): **S1** frequency slowing 95, **S2**
-inter-electrode coherence 684, **S3** spectral entropy 19, **S4** hemispheric
-asymmetry 32. Each encoder maps `n → 64 → 32`; the four 32-d embeddings are
-concatenated to 128, scaled by four sigmoid gates, then classified `128 → 64 → 3`.
+Feature streams (830 features): **S1** frequency slowing 95, **S2** coherence
+684, **S3** spectral entropy 19, **S4** hemispheric asymmetry 32. Each encoder
+maps `n → 64 → 32`; the four 32-d embeddings concatenate to 128, are scaled by
+four sigmoid gates, then classified `128 → 64 → 3`.
 
 Gate weights describe **stream contribution**, not causal medical explanations.
 
-### Baselines (reported openly)
+### Ablation (from `ablation_results.txt`)
+
+| Configuration | Test accuracy |
+| --- | --- |
+| S1 only | 46.22% |
+| **S1 + S2** | **58.82%** |
+| S1 + S2 + S3 | 49.58% |
+| Full (S1–S4), gated | 55.46% |
+| Full, no gating | 55.46% |
+
+**S1 + S2 outperforms the full four-stream model.** At this dataset scale the
+entropy and asymmetry streams add more noise than signal — consistent with their
+low learned gate activations.
+
+### Baselines (published, not measured here)
 
 | Model | Parameters | Test accuracy |
 | --- | --- | --- |
@@ -49,104 +145,74 @@ Gate weights describe **stream contribution**, not causal medical explanations.
 | CEEDNet Single | 25.7M | 77.32% |
 | CEEDNet Ensemble | 253.8M | 79.16% |
 
-Ablation finding: **S1 + S2 (55.51%) outperforms the full four-stream model
-(53.39%)** — at this dataset scale S3 and S4 add noise, consistent with their low
-learned gate activations.
+## API surface
 
-## Running the frontend
+```
+POST /api/auth/register     POST /api/auth/login      GET  /api/auth/me
+
+GET/POST /api/patients      GET/PATCH/DELETE /api/patients/{id}
+
+POST /api/analyses                        (multipart: file, patient_id, notes, n_crops)
+POST /api/analyses/from-record/{serial}   score a CAUEEG patient with known ground truth
+POST /api/analyses/{id}/reanalyse
+GET  /api/analyses/{id}                   full result incl. biomarkers
+GET  /api/analyses/{id}/waveform          decimated EEG for the viewer
+GET  /api/analyses/{id}/recording         download the source EDF
+
+GET  /api/history           /api/history/stats   /api/history/compare?ids=...
+GET  /api/history/patients/{id}/timeline
+GET  /api/reports/{id}?format=json|html|pdf
+
+GET  /health   /model/info   /model/performance   /model/ablation
+GET  /model/checkpoints      POST /model/reload
+GET  /dataset  /dataset/records  /dataset/schema
+POST /predict  /predict/features  /predict/record/{serial}    (stateless)
+```
+
+Verify the backend without a browser:
 
 ```bash
-bun install     # or npm install
-bun run dev     # http://localhost:8080
+python backend/scripts/smoke_test.py       # inference layer
+python backend/scripts/api_smoke_test.py   # application layer, throwaway DB
 ```
 
-Demo data (patients, recordings, analyses, gate weights) is seeded in the browser
-on first load and can be reseeded from **Settings → Reseed workspace**.
-
-## Data flow / intended architecture
+## Pipeline
 
 ```
-React (this repo)
-   → Express API  → PostgreSQL / Prisma
-                  → Python FastAPI → QSFE-Net (PyTorch)
+EDF → pyEDFlib read (first 19 channels) → resample to 200 Hz if needed
+    → N evenly spaced 10 s crops → per-channel z-normalisation
+    → S1/S2/S3/S4 extraction (830 features) → QSFE-Net
+    → probabilities + gates averaged across crops → decoded biomarkers
 ```
 
-`src/services/mockApi.ts` is the single seam: its function signatures mirror the
-API below, so replacing it with an Axios client pointed at `VITE_API_URL` swaps
-mock data for the live backend with no page changes.
+Feature extraction dominates the cost: coherence over 171 channel pairs runs
+~0.7 s per crop on CPU, while the forward pass is ~2 ms. A 5-crop upload takes a
+few seconds.
 
-### API surface (Express)
+Channel order follows the CAUEEG montage
+(`Fp1 F3 C3 P3 O1 Fp2 F4 C4 P4 O2 F7 T3 T5 F8 T4 T6 Fz Cz Pz`), and the first 19
+channels are used positionally. **Recordings in a different channel order will
+produce meaningless asymmetry and coherence features** — name-based remapping is
+not implemented.
 
-```
-POST /api/auth/register        POST /api/auth/login        GET /api/auth/me
-GET  /api/patients             POST /api/patients
-GET  /api/patients/:id         PUT  /api/patients/:id
-POST /api/eeg/upload           GET  /api/eeg/:id
-POST /api/analyses             GET  /api/analyses
-GET  /api/analyses/:id         GET  /api/analyses/:id/status
-GET  /api/dashboard/stats
-GET  /api/model                GET  /api/model/performance
-GET  /api/model/gates          GET  /api/model/ablation
-```
+## Repository layout notes
 
-### ML service (FastAPI)
+- **`ML/` is a separate git repository** (`github.com/Sanchit-Raut/Major`) checked
+  out inside this one. It is listed in `.gitignore` so the outer repo cannot
+  commit a gitlink to a submodule that was never registered. Decide whether to
+  register it as a real submodule or absorb it before relying on a fresh clone.
+- **`server/` and `ml-service/` are superseded** by `ML/backend` and are no longer
+  wired to anything. `server/` was an Express + Prisma app layer duplicating
+  `ML/backend/api/`; `ml-service/` was a FastAPI stub whose `MOCK_INFERENCE` mode
+  returned values derived from a hash of the filename. Both are kept on disk for
+  reference and gitignored; delete them once you are satisfied with the new stack.
 
-```
-GET  /health
-POST /predict   →  { prediction, probabilities: { normal, mci, dementia },
-                     confidence, gateWeights: { S1, S2, S3, S4 }, modelVersion }
-```
+## Limitations
 
-Pipeline: EDF → MNE load → trim to 300 s → 0.5–30 Hz band-pass → 30 s crop →
-S1/S2/S3/S4 extraction → QSFE-Net → probabilities + gate weights.
-
-### Data model (Prisma / PostgreSQL)
-
-`User`, `Patient`, `EEGRecording`, `Analysis`, `GateWeight`, `FeatureSummary`,
-`ModelVersion` — mirrored by the TypeScript interfaces in
-`src/services/mockApi.ts`.
-
-## MOCK_INFERENCE
-
-With `MOCK_INFERENCE=true` no PyTorch checkpoint is required. Results are
-generated demo values and are labelled as demo data everywhere they appear. Real
-model predictions are never fabricated silently.
-
-## Environment
-
-See `.env.example` (`DATABASE_URL`, `JWT_SECRET`, `ML_SERVICE_URL`,
-`VITE_API_URL`, `MOCK_INFERENCE`).
-
----
-
-<details>
-<summary>Lovable project info</summary>
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
-</details>
+- ~53% three-class accuracy: above the 33% chance level, far below clinical
+  reliability. This is a research artefact, not a diagnostic tool.
+- Predictions are grouped by the class the model predicted, never by a verified
+  clinical label — except for dataset recordings, where the CAUEEG ground truth
+  is shown alongside and marked as such.
+- Uploads whose sample rate differs from 200 Hz are resampled; the response
+  reports `recording.resampled_from`.
