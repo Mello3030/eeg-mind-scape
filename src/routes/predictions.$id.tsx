@@ -102,6 +102,7 @@ function ResultPage() {
 
   return (
     <AppShell
+      breadcrumbLabel={a.patient?.code ?? a.id.slice(0, 8)}
       title={`Analysis ${a.id}`}
       subtitle={`${a.patient?.code ?? "unknown patient"} · ${a.upload?.filename ?? a.sourceRef ?? "recording"} · ${a.checkpoint ?? "checkpoint"}`}
       actions={

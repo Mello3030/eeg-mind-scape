@@ -147,6 +147,7 @@ function PatientPage() {
 
   return (
     <AppShell
+      breadcrumbLabel={p.code ?? p.id.slice(0, 8)}
       title={`Patient ${p.code ?? p.id.slice(0, 8)}`}
       subtitle={`${p.age ?? "?"} y · ${p.sex ?? "?"} · registered ${fmtDate(p.createdAt)}`}
       actions={

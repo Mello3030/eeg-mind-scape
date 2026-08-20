@@ -9,16 +9,23 @@ import {
   LayoutDashboard,
   ListOrdered,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Upload,
   Users,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { useAuth } from "@/context/AuthContext";
 import { MODEL } from "@/lib/qsfe";
 import { apiHealth, modelInfo } from "@/services/api";
 
-/** Same routes as before, grouped for the sidebar's editorial sectioning. */
+/**
+ * Navigation groups. The same nine routes as before — grouping and order are
+ * presentational only. `System` is pinned to the bottom of the rail.
+ */
 const NAV_GROUPS = [
   {
     heading: "Workspace",
@@ -26,6 +33,11 @@ const NAV_GROUPS = [
       { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { to: "/patients", label: "Patients", icon: Users },
       { to: "/upload", label: "New Analysis", icon: Upload },
+    ],
+  },
+  {
+    heading: "Analysis",
+    items: [
       { to: "/predictions", label: "Predictions", icon: ListOrdered },
       { to: "/analysis", label: "EEG Analysis", icon: Activity },
     ],
@@ -37,32 +49,37 @@ const NAV_GROUPS = [
       { to: "/performance", label: "Performance", icon: Gauge },
     ],
   },
-  {
-    heading: "Reference",
-    items: [
-      { to: "/about", label: "About", icon: Info },
-      { to: "/settings", label: "Settings", icon: Settings },
-    ],
-  },
 ] as const;
 
-// Spread rather than flatMap: it keeps each `to` as a literal type, which the
-// router's Link needs for type-safe routes.
-const NAV = [...NAV_GROUPS[0].items, ...NAV_GROUPS[1].items, ...NAV_GROUPS[2].items];
+const BOTTOM_GROUP = {
+  heading: "System",
+  items: [
+    { to: "/about", label: "About", icon: Info },
+    { to: "/settings", label: "Settings", icon: Settings },
+  ],
+} as const;
+
+const ALL_GROUPS = [...NAV_GROUPS, BOTTOM_GROUP];
 
 export function AppShell({
   title,
   subtitle,
   actions,
+  breadcrumbLabel,
   children,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
+  /** Label for the final breadcrumb on detail routes (a code, not a raw id). */
+  breadcrumbLabel?: string | undefined;
   children: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, logout } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const { data: health, isError: apiOffline } = useQuery({
     queryKey: ["health"],
     queryFn: apiHealth,
@@ -77,134 +94,149 @@ export function AppShell({
     retry: false,
   });
 
+  // Unchanged active-route rule: exact match, or a parent of a detail route.
+  const isActive = (to: string) =>
+    pathname === to || (to !== "/dashboard" && pathname.startsWith(to + "/"));
+
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
-        <div className="border-b border-sidebar-border px-5 py-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-7 items-center justify-center bg-sidebar-primary text-sidebar-primary-foreground">
-              <FlaskConical className="size-3.5" />
-            </div>
-            <div className="text-[15px] font-bold tracking-tight text-sidebar-accent-foreground">
-              QSFE&#8209;Net
-            </div>
-          </div>
-          <div className="mt-2.5 text-[10px] leading-relaxed tracking-[0.12em] text-sidebar-foreground/55 uppercase">
-            EEG Dementia
-            <br />
-            Screening Platform
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto py-3">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.heading} className="mb-4 last:mb-0">
-              <div className="px-5 pb-1.5 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/40 uppercase">
-                {group.heading}
+      <aside
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex ${
+          collapsed ? "w-[72px]" : "w-[212px]"
+        }`}
+      >
+        {/* Profile sits at the top of the rail, as the reference has it. */}
+        <div className="border-b border-sidebar-border p-3">
+          {user ? (
+            <div className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}>
+              <div
+                title={collapsed ? `${user.name} · ${user.role}` : undefined}
+                className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/10 text-[11px] font-semibold text-sidebar-accent-foreground"
+              >
+                {user.name.slice(0, 1).toUpperCase()}
               </div>
-              {group.items.map(({ to, label, icon: Icon }) => {
-                const active =
-                  pathname === to || (to !== "/dashboard" && pathname.startsWith(to + "/"));
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    className={`relative flex items-center gap-2.5 px-5 py-1.5 text-[13px] transition-colors ${
-                      active
-                        ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                    }`}
-                  >
-                    {active && (
-                      <span
-                        aria-hidden
-                        className="absolute inset-y-0 left-0 w-[2px] bg-sidebar-primary"
-                      />
-                    )}
-                    <Icon className="size-3.5 shrink-0" />
-                    {label}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-
-        <div className="border-t border-sidebar-border">
-          <dl className="num space-y-1 px-5 py-3.5 text-[10px] leading-relaxed text-sidebar-foreground/50">
-            <div className="flex justify-between gap-2">
-              <dt className="tracking-wider uppercase">ckpt</dt>
-              <dd className="truncate text-sidebar-foreground/75" title={model?.checkpoint ?? ""}>
-                {model ? model.checkpoint : "none"}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="tracking-wider uppercase">params</dt>
-              <dd className="text-sidebar-foreground/75">
-                {model ? model.nParameters.toLocaleString() : "—"}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="tracking-wider uppercase">device</dt>
-              <dd className="text-sidebar-foreground/75">{model ? model.device : "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="tracking-wider uppercase">data</dt>
-              <dd className="text-sidebar-foreground/75">
-                {MODEL.dataset.name} · {MODEL.dataset.channels}ch · {MODEL.dataset.samplingRate}Hz
-              </dd>
-            </div>
-          </dl>
-
-          <div className="border-t border-sidebar-border p-3">
-            {user ? (
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[11px] font-semibold text-sidebar-accent-foreground">
-                    {user.name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-xs text-sidebar-accent-foreground">
+              {!collapsed && (
+                <>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-medium text-sidebar-accent-foreground">
                       {user.name}
                     </div>
-                    <div className="text-[10px] tracking-wider text-sidebar-foreground/55 uppercase">
+                    <div className="truncate text-[10px] tracking-wider text-sidebar-foreground/50 uppercase">
                       {user.role}
                     </div>
                   </div>
-                </div>
-                <button
-                  aria-label="Sign out"
-                  onClick={logout}
-                  className="shrink-0 p-1 text-sidebar-foreground/55 transition-colors hover:text-sidebar-accent-foreground"
-                >
-                  <LogOut className="size-3.5" />
-                </button>
+                  <button
+                    aria-label="Sign out"
+                    title="Sign out"
+                    onClick={logout}
+                    className="shrink-0 rounded-control p-1.5 text-sidebar-foreground/50 transition-colors duration-150 hover:bg-white/10 hover:text-sidebar-accent-foreground"
+                  >
+                    <LogOut className="size-3.5" />
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}>
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-sidebar-primary text-sidebar-primary-foreground">
+                <FlaskConical className="size-4" />
               </div>
-            ) : (
-              <Link
-                to="/login"
-                className="block rounded-control bg-sidebar-primary px-2 py-2 text-center text-xs font-medium text-sidebar-primary-foreground transition-opacity hover:opacity-90"
-              >
-                Sign in
-              </Link>
-            )}
+              {!collapsed && (
+                <Link
+                  to="/login"
+                  className="min-w-0 flex-1 truncate text-[13px] font-medium text-sidebar-accent-foreground hover:underline"
+                >
+                  Sign in
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+
+        <nav className="flex flex-1 flex-col overflow-y-auto px-2.5 py-4">
+          {NAV_GROUPS.map((group) => (
+            <NavGroup
+              key={group.heading}
+              heading={group.heading}
+              items={group.items}
+              collapsed={collapsed}
+              isActive={isActive}
+            />
+          ))}
+
+          {/* Pinned to the bottom of the rail, per the reference layout. */}
+          <div className="mt-auto pt-4">
+            <NavGroup
+              heading={BOTTOM_GROUP.heading}
+              items={BOTTOM_GROUP.items}
+              collapsed={collapsed}
+              isActive={isActive}
+            />
           </div>
+        </nav>
+
+        {!collapsed && (
+          <div className="px-3 pb-3">
+            <div className="rounded-control border border-white/8 bg-white/[0.04] px-3 py-2.5">
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className={`size-1.5 rounded-full ${
+                    model ? "bg-normal" : "bg-sidebar-foreground/30"
+                  }`}
+                />
+                <span className="text-[10px] font-semibold tracking-[0.14em] text-sidebar-foreground/45 uppercase">
+                  {model ? "Model loaded" : "No checkpoint"}
+                </span>
+              </div>
+              <dl className="num space-y-0.5 text-[10px] text-sidebar-foreground/50">
+                {[
+                  ["ckpt", model ? model.checkpoint : "none"],
+                  ["params", model ? model.nParameters.toLocaleString() : "—"],
+                  ["device", model ? model.device : "—"],
+                  ["data", `${MODEL.dataset.name} · ${MODEL.dataset.channels}ch`],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-2">
+                    <dt className="tracking-wider uppercase">{k}</dt>
+                    <dd className="truncate text-sidebar-foreground/75" title={v}>
+                      {v}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-sidebar-border p-2.5">
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className={`flex w-full items-center gap-3 rounded-control px-3 py-2 text-[12px] text-sidebar-foreground/55 transition-colors duration-150 hover:bg-white/[0.055] hover:text-sidebar-accent-foreground ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="size-4 shrink-0" />
+            ) : (
+              <>
+                <PanelLeftClose className="size-4 shrink-0" />
+                <span>Collapse</span>
+              </>
+            )}
+          </button>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 border-b-[1.5px] border-border-strong bg-background/92 backdrop-blur-sm">
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 px-4 pt-5 pb-3 lg:px-8">
-            <div className="min-w-0">
-              <h1 className="display-1 text-foreground">{title}</h1>
-              {subtitle && (
-                <p className="mt-1.5 max-w-2xl truncate text-[11px] tracking-wide text-muted-foreground">
-                  {subtitle}
-                </p>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        {/* Compact application taskbar: breadcrumbs left, existing actions right. */}
+        <header className="sticky top-0 z-10 border-b border-border bg-background/92 backdrop-blur-sm">
+          <div className="flex h-16 items-center gap-4 px-4 lg:px-8">
+            <Breadcrumbs leafLabel={breadcrumbLabel} />
+            <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>
           </div>
+
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border bg-surface px-4 py-1.5 lg:px-8">
             <span className="label-xs">Research prototype — not for clinical diagnosis</span>
             {health && !health.modelLoaded && (
@@ -225,32 +257,83 @@ export function AppShell({
           </div>
         </header>
 
-        <nav className="flex gap-1.5 overflow-x-auto border-b border-border bg-card px-3 py-2 lg:hidden">
-          {NAV.map(({ to, label }) => {
-            const active =
-              pathname === to || (to !== "/dashboard" && pathname.startsWith(to + "/"));
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={`shrink-0 rounded-xs border px-2.5 py-1 text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors ${
-                  active
-                    ? "border-border-strong bg-foreground text-background"
-                    : "border-border text-muted-foreground"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
+        <MobileNav
+          open={drawerOpen}
+          onOpen={() => setDrawerOpen(true)}
+          onClose={() => setDrawerOpen(false)}
+          groups={ALL_GROUPS}
+          isActive={isActive}
+          user={user}
+          logout={logout}
+        />
 
-        <main className="flex-1 px-4 py-6 lg:px-8">{children}</main>
+        <main className="flex-1 px-4 py-6 lg:px-8">
+          <div className="mb-6">
+            <h1 className="display-1 text-foreground">{title}</h1>
+            {subtitle && (
+              <p className="mt-2 max-w-3xl text-[12px] leading-relaxed text-muted-foreground">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {children}
+        </main>
 
         <footer className="border-t border-border px-4 py-4 text-[11px] leading-relaxed text-muted-foreground lg:px-8">
           QSFE-Net · Deep Learning-Based Cross-Dataset EEG Analysis for Early Dementia Detection ·
           Outputs are model predictions, not confirmed diagnoses.
         </footer>
+      </div>
+    </div>
+  );
+}
+
+/** One labelled group of rail items. */
+function NavGroup({
+  heading,
+  items,
+  collapsed,
+  isActive,
+}: {
+  heading: string;
+  items: readonly { readonly to: string; readonly label: string; readonly icon: typeof Users }[];
+  collapsed: boolean;
+  isActive: (to: string) => boolean;
+}) {
+  return (
+    <div className="mb-6 last:mb-0">
+      {!collapsed && (
+        <div className="mb-1.5 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/40 uppercase">
+          {heading}
+        </div>
+      )}
+      <div className="space-y-1">
+        {items.map(({ to, label, icon: Icon }) => {
+          const active = isActive(to);
+          return (
+            <Link
+              key={to}
+              to={to}
+              title={collapsed ? label : undefined}
+              className={`group flex h-10 items-center gap-3 rounded-control border px-3 text-[13px] font-medium transition-colors duration-150 ${
+                collapsed ? "justify-center" : ""
+              } ${
+                active
+                  ? "border-white/[0.08] bg-white/[0.11] text-sidebar-accent-foreground"
+                  : "border-transparent text-sidebar-foreground/65 hover:bg-white/[0.055] hover:text-sidebar-accent-foreground"
+              }`}
+            >
+              <Icon
+                className={`size-4 shrink-0 transition-colors ${
+                  active
+                    ? "text-sidebar-primary"
+                    : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/80"
+                }`}
+              />
+              {!collapsed && <span className="truncate">{label}</span>}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

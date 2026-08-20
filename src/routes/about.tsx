@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { GraduationCap, Linkedin } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { modelInfo, modelPerformance } from "@/services/api";
 import { Disclaimer, Panel } from "@/components/ui-kit";
@@ -24,6 +25,51 @@ export const Route = createFileRoute("/about")({
   }),
   component: AboutPage,
 });
+
+/**
+ * Project credits. Names are as they appear on each linked profile; roles are as
+ * stated by the team. No biography text is invented here — add a `bio` line to a
+ * member if you want one shown.
+ */
+const TEAM: ReadonlyArray<{
+  name: string;
+  role: string;
+  href: string;
+  lead?: boolean;
+  /** Optional short bio. Nothing renders when absent — do not invent one. */
+  bio?: string;
+}> = [
+  {
+    name: "Sanchit Raut",
+    role: "Team lead",
+    href: "https://www.linkedin.com/in/sanchit-raut-b96b9a2b3/",
+    lead: true,
+  },
+  {
+    name: "Vedant Kannurkar",
+    role: "Team member",
+    href: "https://www.linkedin.com/in/vedant-kannurkar/",
+  },
+  {
+    name: "Siddarth Potdar",
+    role: "Team member",
+    href: "https://www.linkedin.com/in/siddarth-potdar-671888229/",
+  },
+];
+
+const GUIDE = {
+  name: "Sujata Kulkarni",
+  role: "Project guide",
+  href: "https://www.researchgate.net/profile/Sujata-Kulkarni-2",
+} as const;
+
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
 function AboutPage() {
   const { data: model } = useQuery({ queryKey: ["modelInfo"], queryFn: modelInfo, retry: false });
@@ -174,6 +220,104 @@ function AboutPage() {
           </Panel>
         </div>
       </div>
+
+      {/* Credits. External profiles open in a new tab and carry rel="noreferrer"
+          so the linked site cannot reach back through window.opener. */}
+      <section className="panel-strong mt-3 overflow-hidden">
+        <header className="border-b border-border-strong px-5 py-4">
+          <div className="label-xs">Credits</div>
+          <h2 className="display-2 mt-1.5 text-foreground">Created by</h2>
+          <p className="mt-1.5 max-w-xl text-[11px] leading-relaxed text-muted-foreground">
+            Final-year research project. QSFE-Net, the feature pipeline, the API and this platform
+            were built by the team below.
+          </p>
+        </header>
+
+        <ul className="grid sm:grid-cols-3">
+          {TEAM.map((member) => (
+            <li
+              key={member.name}
+              className={`border-border p-5 not-last:border-b sm:not-last:border-r sm:not-last:border-b-0 ${
+                member.lead ? "bg-primary/[0.04]" : ""
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  aria-hidden
+                  className={`num flex size-10 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${
+                    member.lead
+                      ? "bg-primary text-primary-foreground"
+                      : "border border-border-strong bg-secondary text-foreground"
+                  }`}
+                >
+                  {initials(member.name)}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-[14px] font-semibold text-foreground">
+                    {member.name}
+                  </div>
+                  {member.lead ? (
+                    <span className="mt-1 inline-block rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold tracking-[0.1em] text-primary-foreground uppercase">
+                      {member.role}
+                    </span>
+                  ) : (
+                    <div className="mt-0.5 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                      {member.role}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {member.bio && (
+                <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                  {member.bio}
+                </p>
+              )}
+
+              <a
+                href={member.href}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-control border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:border-border-strong hover:bg-secondary hover:text-foreground"
+              >
+                <Linkedin className="size-3.5 shrink-0" />
+                LinkedIn
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <div className="border-t border-border bg-surface px-5 py-4">
+          <div className="label-xs">Under the guidance of</div>
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div
+                aria-hidden
+                className="num flex size-10 shrink-0 items-center justify-center rounded-full border border-border-strong bg-card text-[12px] font-semibold text-foreground"
+              >
+                {initials(GUIDE.name)}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-[14px] font-semibold text-foreground">
+                  {GUIDE.name}
+                </div>
+                <div className="mt-0.5 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                  {GUIDE.role}
+                </div>
+              </div>
+            </div>
+            <a
+              href={GUIDE.href}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-control border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:border-border-strong hover:bg-card hover:text-foreground"
+            >
+              <GraduationCap className="size-3.5 shrink-0" />
+              ResearchGate
+            </a>
+          </div>
+        </div>
+      </section>
     </AppShell>
   );
 }
