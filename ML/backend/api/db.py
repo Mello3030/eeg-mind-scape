@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from datetime import datetime, timezone
 
 from sqlalchemy import Engine, MetaData, create_engine, event, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from ..app.config import get_settings
@@ -85,6 +86,58 @@ def init_db() -> None:
             conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema}"'))
 
     Base.metadata.create_all(bind=engine)
+
+
+def mask_url(url: str) -> str:
+    """Hide the password before a connection string is ever returned or logged."""
+    try:
+        return make_url(url).render_as_string(hide_password=True)
+    except Exception:
+        return "<unparseable>"
+
+
+def db_diagnostics() -> dict:
+    """Live view of what the API is actually talking to.
+
+    Runs a real round trip rather than reporting configuration, so a URL that is
+    set but unreachable shows as disconnected instead of looking healthy.
+    """
+    settings = get_settings()
+    backend = engine.url.get_backend_name()
+    info: dict = {
+        "backend": backend,
+        "url": mask_url(settings.resolved_database_url),
+        "schema": Base.metadata.schema,
+        # SQLite lives on the container filesystem, which every PaaS free tier
+        # wipes on restart. Anything server-side survives restarts.
+        "persistent": backend != "sqlite",
+        "connected": False,
+        "error": None,
+        "counts": {},
+    }
+
+    try:
+        with SessionLocal() as session:
+            session.execute(text("SELECT 1"))
+            info["connected"] = True
+            for table in ("users", "patients", "predictions", "uploads"):
+                try:
+                    qualified = f'"{Base.metadata.schema}".{table}' if Base.metadata.schema else table
+                    info["counts"][table] = int(
+                        session.execute(text(f"SELECT count(*) FROM {qualified}")).scalar() or 0
+                    )
+                except Exception:
+                    info["counts"][table] = None
+    except Exception as exc:  # pragma: no cover - depends on the deployment
+        info["error"] = f"{type(exc).__name__}: {exc}"[:300]
+
+    if backend == "sqlite":
+        info["warning"] = (
+            "SQLite stores data on the container filesystem. On Render, Vercel and "
+            "similar hosts this is wiped on every restart or redeploy. Set "
+            "QSFE_DATABASE_URL to a Postgres URL for durable storage."
+        )
+    return info
 
 
 def get_db() -> Iterator[Session]:

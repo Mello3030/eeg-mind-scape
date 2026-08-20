@@ -97,6 +97,7 @@ class HealthResponse(BaseModel):
     checkpoint: str | None = None
     extractor_compatible: bool | None = None
     dataset_available: bool
+    database: dict[str, Any] | None = None
     paths: dict[str, Any]
 
 

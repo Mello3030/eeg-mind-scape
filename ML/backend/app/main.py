@@ -15,7 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from ..api.db import init_db
+from ..api.db import db_diagnostics, init_db
 from ..api.routers import analyses, auth, history, patients, reports
 from .catalog import CatalogUnavailable, get_catalog
 from .config import DEFAULT_JWT_SECRET, get_settings
@@ -70,7 +70,27 @@ async def lifespan(app: FastAPI):
 
     init_db()
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
-    logger.info("Database: %s", settings.resolved_database_url)
+
+    diagnostics = db_diagnostics()
+    logger.info(
+        "Database: %s (backend=%s, connected=%s, counts=%s)",
+        diagnostics["url"],
+        diagnostics["backend"],
+        diagnostics["connected"],
+        diagnostics["counts"],
+    )
+    if not diagnostics["connected"]:
+        logger.error("Database is NOT reachable: %s", diagnostics["error"])
+    elif not diagnostics["persistent"]:
+        # Silent data loss is the worst failure mode here: the API looks healthy,
+        # writes succeed, and everything disappears on the next restart.
+        logger.warning(
+            "DATA IS NOT PERSISTENT — running on SQLite at %s. On Render/Vercel and "
+            "similar hosts this file is wiped on every restart and redeploy. Set "
+            "QSFE_DATABASE_URL to a Postgres (Neon) URL to keep accounts, patients "
+            "and analyses.",
+            settings.resolved_database_url,
+        )
     logger.info("Dataset catalog available: %s", get_catalog().available)
     yield
 

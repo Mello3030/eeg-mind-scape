@@ -201,6 +201,72 @@ function SettingsPage() {
           )}
         </Panel>
 
+        {/* Storage is the one piece of server state that fails silently: writes
+            succeed, the API looks healthy, and the data is gone after a restart.
+            Surfaced here so that is visible without reading deploy logs. */}
+        <Panel
+          title="Storage"
+          hint="Where accounts, patients and analyses are actually written"
+          emphasis={health?.database ? !health.database.persistent : false}
+        >
+          {!health?.database ? (
+            <p className="text-xs text-muted-foreground">
+              This API build does not report database status. Update the backend to see it here.
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`num rounded-xs border px-1.5 py-0.5 text-[10px] font-medium tracking-wider uppercase ${
+                    health.database.connected
+                      ? "border-normal/40 bg-normal/10 text-foreground"
+                      : "border-destructive/40 bg-destructive/10 text-destructive"
+                  }`}
+                >
+                  {health.database.connected ? "connected" : "not connected"}
+                </span>
+                <span
+                  className={`num rounded-xs border px-1.5 py-0.5 text-[10px] font-medium tracking-wider uppercase ${
+                    health.database.persistent
+                      ? "border-normal/40 bg-normal/10 text-foreground"
+                      : "border-dementia/40 bg-dementia/10 text-foreground"
+                  }`}
+                >
+                  {health.database.persistent ? "persistent" : "ephemeral"}
+                </span>
+                <span className="num text-[11px] text-muted-foreground">
+                  {health.database.backend}
+                </span>
+              </div>
+
+              <table className="mt-3 w-full text-left text-xs">
+                <tbody>
+                  <tr className="border-b border-border/70">
+                    <td className="label-xs py-1.5 pr-3">URL</td>
+                    <td
+                      className="num max-w-[22rem] truncate py-1.5 text-muted-foreground"
+                      title={health.database.url}
+                    >
+                      {health.database.url}
+                    </td>
+                  </tr>
+                  {Object.entries(health.database.counts).map(([table, count]) => (
+                    <tr key={table} className="border-b border-border/70 last:border-0">
+                      <td className="label-xs py-1.5 pr-3">{table}</td>
+                      <td className="num py-1.5">{count ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {health.database.error && (
+                <p className="num mt-3 text-[11px] text-destructive">{health.database.error}</p>
+              )}
+              {health.database.warning && <Disclaimer>{health.database.warning}</Disclaimer>}
+            </>
+          )}
+        </Panel>
+
         <Panel title="Environment" hint="Resolved server-side configuration">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

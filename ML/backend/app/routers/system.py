@@ -20,6 +20,7 @@ from ..schemas import (
     ReloadRequest,
 )
 from ..version import __version__
+from ...api.db import db_diagnostics
 
 router = APIRouter(tags=["system"])
 
@@ -37,6 +38,7 @@ def health() -> HealthResponse:
         checkpoint=model.checkpoint_path.name if model else None,
         extractor_compatible=model.extractor_compatible if model else None,
         dataset_available=get_catalog().available,
+        database=db_diagnostics(),
         paths={
             "repo_root": str(settings.repo_root),
             "checkpoint": str(settings.checkpoint_path),

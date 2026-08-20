@@ -732,7 +732,21 @@ export interface HealthStatus {
   checkpoint: string | null;
   extractorCompatible: boolean | null;
   datasetAvailable: boolean;
+  database: DatabaseStatus | null;
   paths: Record<string, string>;
+}
+
+/** Live view of the store the API is actually writing to. */
+export interface DatabaseStatus {
+  backend: string;
+  url: string;
+  schema: string | null;
+  /** False for SQLite, which most hosts wipe on restart. */
+  persistent: boolean;
+  connected: boolean;
+  error: string | null;
+  counts: Record<string, number | null>;
+  warning?: string;
 }
 
 export async function apiHealth(): Promise<HealthStatus> {
@@ -745,6 +759,7 @@ export async function apiHealth(): Promise<HealthStatus> {
     checkpoint: string | null;
     extractor_compatible: boolean | null;
     dataset_available: boolean;
+    database: DatabaseStatus | null;
     paths: Record<string, string>;
   }>("/health");
   return {
@@ -756,6 +771,7 @@ export async function apiHealth(): Promise<HealthStatus> {
     checkpoint: r.checkpoint,
     extractorCompatible: r.extractor_compatible,
     datasetAvailable: r.dataset_available,
+    database: r.database ?? null,
     paths: r.paths,
   };
 }
