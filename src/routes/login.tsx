@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { FlaskConical } from "lucide-react";
+import { Brain } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -87,7 +87,7 @@ export function AuthLayout({
       <aside className="relative hidden flex-col justify-between bg-sidebar p-10 text-sidebar-foreground lg:flex xl:p-14">
         <div className="flex items-center gap-2.5">
           <div className="flex size-7 items-center justify-center bg-sidebar-primary text-sidebar-primary-foreground">
-            <FlaskConical className="size-3.5" />
+            <Brain className="size-3.5" />
           </div>
           <span className="text-[15px] font-bold tracking-tight text-sidebar-accent-foreground">
             QSFE&#8209;Net
@@ -130,7 +130,7 @@ export function AuthLayout({
         <div className="w-full max-w-sm">
           <div className="mb-7 flex items-center gap-2 lg:hidden">
             <div className="flex size-7 items-center justify-center bg-primary text-primary-foreground">
-              <FlaskConical className="size-3.5" />
+              <Brain className="size-3.5" />
             </div>
             <span className="text-sm font-bold tracking-tight">QSFE&#8209;Net</span>
           </div>

@@ -72,7 +72,7 @@ export function MobileNav({
             onClick={onClose}
             className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[270px] flex-col bg-sidebar text-sidebar-foreground shadow-2xl">
+          <div className="absolute inset-y-0 left-0 flex w-[270px] flex-col bg-sidebar text-sidebar-foreground shadow-2xl backdrop-blur-xl">
             <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-4">
               <span className="text-[15px] font-bold tracking-tight text-sidebar-accent-foreground">
                 QSFE&#8209;Net

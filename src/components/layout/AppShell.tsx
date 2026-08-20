@@ -3,7 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   BrainCircuit,
-  FlaskConical,
+  Brain,
   Gauge,
   Info,
   LayoutDashboard,
@@ -101,7 +101,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background">
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground backdrop-blur-xl transition-[width] duration-200 ease-out lg:flex ${
           collapsed ? "w-[72px]" : "w-[212px]"
         }`}
       >
@@ -139,7 +139,7 @@ export function AppShell({
           ) : (
             <div className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}>
               <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-sidebar-primary text-sidebar-primary-foreground">
-                <FlaskConical className="size-4" />
+                <Brain className="size-4" />
               </div>
               {!collapsed && (
                 <Link
@@ -320,7 +320,7 @@ function NavGroup({
               } ${
                 active
                   ? "border-white/[0.08] bg-white/[0.11] text-sidebar-accent-foreground"
-                  : "border-transparent text-sidebar-foreground/65 hover:bg-white/[0.055] hover:text-sidebar-accent-foreground"
+                  : "border-transparent text-sidebar-foreground/75 hover:bg-white/[0.055] hover:text-sidebar-accent-foreground"
               }`}
             >
               <Icon
