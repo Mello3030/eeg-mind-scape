@@ -35,11 +35,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# ML/ is a separate git repository (github.com/Sanchit-Raut/Major) checked out
-# inside this one. Tracking it from here would commit a gitlink pointing at a
-# submodule that was never registered, which breaks every fresh clone. Ignore it
-# until it is either registered as a real submodule or absorbed.
-ML/
+ML/caueeg-dataset/
+ML/caueeg-dataset.zip
+ML/outputs/figures/
+ML/backend/.env
+ML/backend/storage/*.db
 
 # Superseded by ML/backend - kept on disk for reference, not tracked.
 server/

@@ -1,0 +1,22 @@
+# QSFE-Net ML server
+# torch is intentionally left unpinned to a CUDA build here — install it first
+# from https://pytorch.org (this project was developed on torch 2.5.1+cu121).
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pydantic>=2.7
+pydantic-settings>=2.2
+numpy>=1.26
+scipy>=1.11
+pyEDFlib>=0.1.34
+torch>=2.2
+
+# application layer (accounts, patients, history, reports)
+sqlalchemy>=2.0
+PyJWT>=2.8
+argon2-cffi>=23.1
+# Postgres/Neon driver — not needed when running on the default SQLite.
+psycopg2-binary>=2.9
+jinja2>=3.1
+reportlab>=4.0
+httpx>=0.27

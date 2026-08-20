@@ -1,0 +1,7 @@
+ABLATION STUDY RESULTS
+========================================
+A_S1_only: 0.4622
+B_S1_S2: 0.5882
+C_S1_S2_S3: 0.4958
+D_full_QSFE: 0.5546
+E_no_gating: 0.5546

@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# runtime data: uploaded recordings and the SQLite database
+storage/
