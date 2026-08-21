@@ -164,6 +164,15 @@ def run(client: TestClient, args) -> None:
     check("PATCH /api/patients/{id}", patched.json().get("age") == 72,
           f"age={patched.json().get('age')}")
 
+    # A stored analysis must belong to a patient; without one it would be written
+    # and then be invisible to its own creator.
+    orphan = client.post(
+        "/api/analyses",
+        files={"file": ("x.edf", b"0       " + b" " * 248, "application/octet-stream")},
+    )
+    check("POST /api/analyses (no patient -> 422)", orphan.status_code == 422,
+          f"status={orphan.status_code}")
+
     # --- analysis from an uploaded EDF -------------------------------------
     settings = get_settings()
     edf = next(iter(sorted(settings.edf_dir.glob("*.edf"))), None) if settings.edf_dir.exists() else None

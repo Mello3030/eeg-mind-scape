@@ -66,7 +66,17 @@ async def create_analysis(
     user: User = Depends(current_user),
 ) -> PredictionDetail:
     """Upload a recording, score it, and store the result against a patient."""
-    if patient_id and crud.get_patient(db, patient_id, owner_id=scope_of(user)) is None:
+    # A stored analysis is reachable only through its patient — that is how
+    # ownership is expressed. Without one the row would be written, then be
+    # invisible to the very caller who created it, so refuse up front instead of
+    # scoring a recording that lands nowhere. Stateless scoring is /predict.
+    if not patient_id:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "A stored analysis must belong to a patient: pass patient_id. "
+            "To score a recording without storing it, use POST /predict.",
+        )
+    if crud.get_patient(db, patient_id, owner_id=scope_of(user)) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No patient '{patient_id}'.")
 
     suffix = Path(file.filename or "upload.edf").suffix.lower() or ".edf"
@@ -114,6 +124,15 @@ async def create_analysis_from_record(
 ) -> PredictionDetail:
     """Score a CAUEEG dataset patient and store the result with its ground truth."""
     payload = payload or AnalyseRecordRequest()
+    # Same rule as the upload route: with neither an existing patient nor
+    # permission to create one, the result would be stored unreachable.
+    if not payload.patient_id and not payload.create_patient:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "A stored analysis must belong to a patient: pass patient_id, or leave "
+            "create_patient set so one is made for this serial. To score without "
+            "storing, use POST /predict/record/{serial}.",
+        )
     if (
         payload.patient_id
         and crud.get_patient(db, payload.patient_id, owner_id=scope_of(user)) is None
