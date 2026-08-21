@@ -35,7 +35,8 @@ dist-ssr
 *.sln
 *.sw?
 
-ML/caueeg-dataset/
+ML/caueeg-dataset/event/
+ML/caueeg-dataset/signal/
 ML/caueeg-dataset.zip
 ML/outputs/figures/
 ML/backend/.env
