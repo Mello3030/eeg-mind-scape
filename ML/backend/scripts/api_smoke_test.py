@@ -58,6 +58,21 @@ def main() -> int:
 
     try:
         with TestClient(app) as client:
+            # Patients are owned, so the whole application layer now needs a
+            # session. Register one and pin it to the client for every request.
+            reg = client.post(
+                "/api/auth/register",
+                json={
+                    "name": "Smoke Test",
+                    "email": "smoke@qsfe.lab",
+                    "password": "smoketest123",
+                    "role": "researcher",
+                },
+            )
+            check("POST /api/auth/register", reg.status_code == 201, f"status={reg.status_code}")
+            client.headers["Authorization"] = f"Bearer {reg.json()['token']}"
+            check("GET /api/auth/me", client.get("/api/auth/me").status_code == 200)
+
             run(client, args)
     finally:
         if args.keep_db:
@@ -86,6 +101,29 @@ def run(client: TestClient, args) -> None:
     dupe = client.post("/api/patients", json={"code": "MRN-001"})
     check("POST /api/patients (duplicate code -> 409)", dupe.status_code == 409,
           f"status={dupe.status_code}")
+
+    # --- ownership ---------------------------------------------------------
+    other = client.post(
+        "/api/auth/register",
+        json={"name": "Other", "email": "other@qsfe.lab", "password": "othertest123",
+              "role": "researcher"},
+    ).json()["token"]
+    other_headers = {"Authorization": f"Bearer {other}"}
+
+    seen = client.get("/api/patients", headers=other_headers).json()
+    check("another researcher sees no patients", seen["total"] == 0, f"{seen['total']} visible")
+    check(
+        "another researcher gets 404 on this patient",
+        client.get(f"/api/patients/{patient_id}", headers=other_headers).status_code == 404,
+    )
+    check(
+        "another researcher cannot delete this patient",
+        client.delete(f"/api/patients/{patient_id}", headers=other_headers).status_code == 404,
+    )
+    check(
+        "unauthenticated request is rejected",
+        client.get("/api/patients", headers={"Authorization": "Bearer nope"}).status_code == 401,
+    )
 
     listing = client.get("/api/patients", params={"search": "test"}).json()
     check("GET /api/patients?search", listing["total"] >= 1, f"{listing['total']} match")

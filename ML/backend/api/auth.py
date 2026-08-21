@@ -105,3 +105,9 @@ def require_admin(user: User = Depends(current_user)) -> User:
     if user.role != "administrator":
         raise AuthError("Administrator role required.", status.HTTP_403_FORBIDDEN)
     return user
+
+
+def scope_of(user: User) -> str | None:
+    """Owner filter for a caller: ``None`` for an administrator, who sees every
+    record, otherwise their own id."""
+    return None if user.role == "administrator" else user.id

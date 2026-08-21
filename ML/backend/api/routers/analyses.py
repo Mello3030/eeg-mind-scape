@@ -23,8 +23,9 @@ from ...app.inference import InferenceError
 from ...app.model import ModelError
 from ...app.preprocessing import SignalError, read_edf_window
 from .. import crud, service, storage
+from ..auth import current_user, scope_of
 from ..db import get_db
-from ..models import Prediction
+from ..models import Prediction, User
 from ..schemas import (
     AnalyseRecordRequest,
     PredictionDetail,
@@ -37,8 +38,9 @@ router = APIRouter(prefix="/api/analyses", tags=["analyses"])
 ALLOWED_SUFFIXES = {".edf", ".bdf", ".rec"}
 
 
-def _get_or_404(db: Session, prediction_id: str) -> Prediction:
-    prediction = crud.get_prediction(db, prediction_id)
+def _get_or_404(db: Session, prediction_id: str, user: User) -> Prediction:
+    # An analysis is reachable exactly when its patient is.
+    prediction = crud.get_prediction_scoped(db, prediction_id, owner_id=scope_of(user))
     if prediction is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No analysis '{prediction_id}'.")
     return prediction
@@ -61,9 +63,10 @@ async def create_analysis(
     notes: str | None = Form(None),
     n_crops: int | None = Form(None),
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ) -> PredictionDetail:
     """Upload a recording, score it, and store the result against a patient."""
-    if patient_id and crud.get_patient(db, patient_id) is None:
+    if patient_id and crud.get_patient(db, patient_id, owner_id=scope_of(user)) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No patient '{patient_id}'.")
 
     suffix = Path(file.filename or "upload.edf").suffix.lower() or ".edf"
@@ -93,7 +96,7 @@ async def create_analysis(
     except (InferenceError, ModelError) as exc:
         raise _fail(exc) from exc
 
-    return PredictionDetail.model_validate(_get_or_404(db, prediction.id))
+    return PredictionDetail.model_validate(_get_or_404(db, prediction.id, user))
 
 
 @router.post(
@@ -105,10 +108,14 @@ async def create_analysis_from_record(
     serial: str,
     payload: AnalyseRecordRequest | None = None,
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ) -> PredictionDetail:
     """Score a CAUEEG dataset patient and store the result with its ground truth."""
     payload = payload or AnalyseRecordRequest()
-    if payload.patient_id and crud.get_patient(db, payload.patient_id) is None:
+    if (
+        payload.patient_id
+        and crud.get_patient(db, payload.patient_id, owner_id=scope_of(user)) is None
+    ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No patient '{payload.patient_id}'.")
 
     try:
@@ -116,6 +123,7 @@ async def create_analysis_from_record(
             service.analyse_dataset_record,
             db,
             serial,
+            owner_id=user.id,
             patient_id=payload.patient_id,
             create_patient=payload.create_patient,
             n_crops=payload.n_crops,
@@ -125,7 +133,7 @@ async def create_analysis_from_record(
     except (InferenceError, ModelError, CatalogUnavailable, KeyError) as exc:
         raise _fail(exc) from exc
 
-    return PredictionDetail.model_validate(_get_or_404(db, prediction.id))
+    return PredictionDetail.model_validate(_get_or_404(db, prediction.id, user))
 
 
 @router.post(
@@ -137,26 +145,31 @@ async def reanalyse(
     prediction_id: str,
     n_crops: int | None = Query(None, ge=1),
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ) -> PredictionDetail:
     """Re-score a stored analysis with the currently loaded checkpoint."""
-    prediction = _get_or_404(db, prediction_id)
+    prediction = _get_or_404(db, prediction_id, user)
     try:
-        fresh = await run_in_threadpool(service.reanalyse, db, prediction, n_crops)
+        fresh = await run_in_threadpool(service.reanalyse, db, prediction, n_crops, user.id)
     except (InferenceError, ModelError, CatalogUnavailable, KeyError) as exc:
         raise _fail(exc) from exc
-    return PredictionDetail.model_validate(_get_or_404(db, fresh.id))
+    return PredictionDetail.model_validate(_get_or_404(db, fresh.id, user))
 
 
 @router.get("/{prediction_id}", response_model=PredictionDetail)
-def get_analysis(prediction_id: str, db: Session = Depends(get_db)) -> PredictionDetail:
-    return PredictionDetail.model_validate(_get_or_404(db, prediction_id))
+def get_analysis(
+    prediction_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+) -> PredictionDetail:
+    return PredictionDetail.model_validate(_get_or_404(db, prediction_id, user))
 
 
 @router.patch("/{prediction_id}", response_model=PredictionSummary)
 def update_notes(
     prediction_id: str, payload: PredictionNotes, db: Session = Depends(get_db)
 ) -> PredictionSummary:
-    prediction = _get_or_404(db, prediction_id)
+    prediction = _get_or_404(db, prediction_id, user)
     prediction.notes = payload.notes
     db.commit()
     db.refresh(prediction)
@@ -164,9 +177,13 @@ def update_notes(
 
 
 @router.get("/{prediction_id}/recording")
-def download_recording(prediction_id: str, db: Session = Depends(get_db)) -> FileResponse:
+def download_recording(
+    prediction_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+) -> FileResponse:
     """Download the EDF this analysis was computed from."""
-    prediction = _get_or_404(db, prediction_id)
+    prediction = _get_or_404(db, prediction_id, user)
     if prediction.upload is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This analysis has no stored recording.")
     path = storage.resolve(prediction.upload.stored_path)
@@ -208,6 +225,7 @@ async def get_waveform(
     max_points: int = Query(3000, ge=100, le=20000, description="Points per channel after decimation."),
     channels: str | None = Query(None, description="Comma-separated channel names; default all 19."),
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ) -> dict:
     """Return a decimated slice of the source EEG for the viewer.
 
@@ -215,7 +233,7 @@ async def get_waveform(
     tensor the model saw. ``scored_windows`` marks where the crops that produced
     this prediction actually sit, so the viewer can show what was scored.
     """
-    prediction = _get_or_404(db, prediction_id)
+    prediction = _get_or_404(db, prediction_id, user)
     path = _source_edf(prediction)
     wanted = [c.strip() for c in channels.split(",") if c.strip()] if channels else None
 
@@ -238,7 +256,11 @@ async def get_waveform(
 
 
 @router.delete("/{prediction_id}")
-def delete_analysis(prediction_id: str, db: Session = Depends(get_db)) -> dict:
-    prediction = _get_or_404(db, prediction_id)
+def delete_analysis(
+    prediction_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+) -> dict:
+    prediction = _get_or_404(db, prediction_id, user)
     crud.delete_prediction(db, prediction)
     return {"deleted": prediction_id}

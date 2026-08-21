@@ -74,6 +74,7 @@ def analyse_dataset_record(
     db: Session,
     serial: str,
     *,
+    owner_id: str,
     patient_id: str | None = None,
     create_patient: bool = True,
     n_crops: int | None = None,
@@ -115,7 +116,7 @@ def analyse_dataset_record(
         "correct": record["class_name"] == result["prediction"]["label"],
     }
 
-    resolved_patient_id = _resolve_dataset_patient(db, record, patient_id, create_patient)
+    resolved_patient_id = _resolve_dataset_patient(db, record, patient_id, create_patient, owner_id)
 
     return crud.create_prediction(
         db,
@@ -133,18 +134,24 @@ def _resolve_dataset_patient(
     record: dict[str, Any],
     patient_id: str | None,
     create: bool,
+    owner_id: str,
 ) -> str | None:
     if patient_id:
         return patient_id
     if not create:
         return None
-    existing = crud.get_patient_by_serial(db, record["serial"])
+    # Scoped to the caller: two researchers scoring the same CAUEEG serial each
+    # get their own patient row rather than sharing one.
+    existing = crud.get_patient_by_serial(db, record["serial"], owner_id=owner_id)
     if existing:
         return existing.id
     patient = crud.create_patient(
         db,
         {
-            "code": f"CAUEEG-{record['serial']}",
+            "owner_id": owner_id,
+            # The code is unique instance-wide, so qualify it per owner to keep a
+            # second researcher from colliding on the same serial.
+            "code": f"CAUEEG-{record['serial']}-{owner_id[:6]}",
             "name": f"CAUEEG {record['serial']}",
             "age": record.get("age"),
             "dataset_serial": record["serial"],
@@ -154,12 +161,17 @@ def _resolve_dataset_patient(
     return patient.id
 
 
-def reanalyse(db: Session, prediction: Prediction, n_crops: int | None = None) -> Prediction:
+def reanalyse(
+    db: Session, prediction: Prediction, n_crops: int | None = None, owner_id: str | None = None
+) -> Prediction:
     """Re-run a stored analysis with the currently loaded checkpoint."""
     if prediction.source_kind in {"dataset_features", "dataset_edf"} and prediction.source_ref:
         return analyse_dataset_record(
             db,
             prediction.source_ref,
+            # Re-analysis stays on the existing patient, so ownership is whatever
+            # that row already carries.
+            owner_id=owner_id or "",
             patient_id=prediction.patient_id,
             create_patient=False,
             n_crops=n_crops,

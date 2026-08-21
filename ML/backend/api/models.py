@@ -39,9 +39,12 @@ class TimestampMixin:
 
 
 class User(Base, TimestampMixin):
-    """A platform account. Roles gate destructive operations, not data access —
-    every researcher sees the whole workspace, which is what a shared lab
-    instance wants."""
+    """A platform account.
+
+    Patients are owned by the researcher who created them: a researcher sees and
+    deletes only their own, while an administrator sees every record. Ownership
+    cascades — a prediction or upload is reachable exactly when its patient is.
+    """
 
     __tablename__ = "users"
 
@@ -56,6 +59,13 @@ class Patient(Base, TimestampMixin):
     __tablename__ = "patients"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    # The researcher who created this record. Required: an unowned patient would
+    # be invisible to every non-admin and impossible to clean up from the UI.
+    owner_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # Codes stay unique across the instance, so a clash is reported even when the
+    # other record belongs to a different researcher.
     code: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
     name: Mapped[str | None] = mapped_column(String(200))
     age: Mapped[int | None] = mapped_column(Integer)
@@ -64,6 +74,7 @@ class Patient(Base, TimestampMixin):
     # Link to a CAUEEG patient, when this record mirrors a dataset entry.
     dataset_serial: Mapped[str | None] = mapped_column(String(16), index=True)
 
+    owner: Mapped["User"] = relationship()
     uploads: Mapped[list["Upload"]] = relationship(
         back_populates="patient", cascade="all, delete-orphan"
     )

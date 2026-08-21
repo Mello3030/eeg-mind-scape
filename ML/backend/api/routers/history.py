@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 
 from ...app.constants import CLASS_NAMES, STREAM_KEYS
 from .. import crud
+from ..auth import current_user, scope_of
 from ..db import get_db
-from ..models import Prediction
+from ..models import Prediction, User
 from ..schemas import (
     ComparisonEntry,
     ComparisonResponse,
@@ -38,11 +39,13 @@ def list_history(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ) -> PredictionListResponse:
     if label and label not in CLASS_NAMES:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"label must be one of {CLASS_NAMES}.")
     rows, total = crud.list_predictions(
         db,
+        owner_id=scope_of(user),
         patient_id=patient_id,
         label=label,
         source_kind=source_kind,
@@ -61,15 +64,22 @@ def list_history(
 
 
 @router.get("/stats", response_model=HistoryStats)
-def history_stats(db: Session = Depends(get_db)) -> HistoryStats:
+def history_stats(
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+) -> HistoryStats:
     """Dashboard aggregates over everything analysed so far."""
-    return HistoryStats(**crud.stats(db))
+    return HistoryStats(**crud.stats(db, owner_id=scope_of(user)))
 
 
 @router.get("/patients/{patient_id}/timeline", response_model=PatientTimeline)
-def patient_timeline(patient_id: str, db: Session = Depends(get_db)) -> PatientTimeline:
+def patient_timeline(
+    patient_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+) -> PatientTimeline:
     """Every analysis for one patient in order, with the direction of change."""
-    patient = crud.get_patient(db, patient_id)
+    patient = crud.get_patient(db, patient_id, owner_id=scope_of(user))
     if patient is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No patient '{patient_id}'.")
 
@@ -97,13 +107,14 @@ def patient_timeline(patient_id: str, db: Session = Depends(get_db)) -> PatientT
 def compare(
     ids: str = Query(..., description="Comma-separated analysis ids (2-8)."),
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ) -> ComparisonResponse:
     """Line up several analyses side by side for a comparison chart."""
     wanted = [i.strip() for i in ids.split(",") if i.strip()]
     if not 2 <= len(wanted) <= 8:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Provide between 2 and 8 ids.")
 
-    rows = crud.get_predictions_by_ids(db, wanted)
+    rows = crud.get_predictions_by_ids(db, wanted, owner_id=scope_of(user))
     missing = set(wanted) - {row.id for row in rows}
     if missing:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Unknown analyses: {sorted(missing)}")
