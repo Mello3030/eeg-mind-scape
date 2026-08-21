@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { GraduationCap, Linkedin } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { useAuth } from "@/context/AuthContext";
 import { modelInfo, modelPerformance } from "@/services/api";
 import { Disclaimer, Panel } from "@/components/ui-kit";
 import { MODEL, STREAMS, TOTAL_FEATURES, pct } from "@/lib/qsfe";
@@ -72,6 +73,7 @@ const initials = (name: string) =>
     .toUpperCase();
 
 function AboutPage() {
+  const { user } = useAuth();
   const { data: model } = useQuery({ queryKey: ["modelInfo"], queryFn: modelInfo, retry: false });
   const { data: perf } = useQuery({
     queryKey: ["modelPerformance", "test"],
@@ -82,8 +84,19 @@ function AboutPage() {
 
   return (
     <AppShell
+      publicPage
       title="About"
       subtitle="Deep Learning-Based Cross-Dataset EEG Analysis for Early Dementia Detection"
+      actions={
+        !user ? (
+          <Link
+            to="/login"
+            className="rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            Sign in
+          </Link>
+        ) : undefined
+      }
     >
       {/* Editorial lead: the single most important statement on the page gets a
           full-width band and display type before the reference panels begin. */}

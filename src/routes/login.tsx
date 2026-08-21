@@ -69,6 +69,10 @@ function LoginPage() {
           No account?{" "}
           <Link to="/register" className="text-primary hover:underline">
             Register
+          </Link>{" "}
+          ·{" "}
+          <Link to="/about" className="text-primary hover:underline">
+            About this project
           </Link>
         </p>
       </form>

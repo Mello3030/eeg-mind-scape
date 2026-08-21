@@ -66,11 +66,14 @@ export function AppShell({
   subtitle,
   actions,
   breadcrumbLabel,
+  publicPage = false,
   children,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
+  /** Readable without a session. Only /about sets this. */
+  publicPage?: boolean;
   /** Label for the final breadcrumb on detail routes (a code, not a raw id). */
   breadcrumbLabel?: string | undefined;
   children: ReactNode;
@@ -110,12 +113,12 @@ export function AppShell({
   // during that window or a valid session would be bounced on every reload.
   // `redirect` lets sign-in return the user to the page they asked for.
   useEffect(() => {
-    if (ready && !user) {
+    if (!publicPage && ready && !user) {
       navigate({ to: "/login", search: { redirect: pathname }, replace: true });
     }
-  }, [ready, user, navigate, pathname]);
+  }, [publicPage, ready, user, navigate, pathname]);
 
-  if (!ready || !user) {
+  if (!publicPage && (!ready || !user)) {
     return <SessionGate checking={!ready} />;
   }
 

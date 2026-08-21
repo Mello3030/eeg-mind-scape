@@ -86,6 +86,10 @@ function RegisterPage() {
           Already registered?{" "}
           <Link to="/login" className="text-primary hover:underline">
             Sign in
+          </Link>{" "}
+          ·{" "}
+          <Link to="/about" className="text-primary hover:underline">
+            About this project
           </Link>
         </p>
       </form>
