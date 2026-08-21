@@ -68,6 +68,8 @@ function PatientsPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            type="search"
+            aria-label="Search patients by ID, name or dataset serial"
             placeholder="Search ID, name, serial…"
             className="w-44 rounded-control border border-input bg-card px-2 py-1 text-xs"
           />

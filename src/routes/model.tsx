@@ -180,6 +180,7 @@ function ModelPage() {
             hint={`Mean gate activation over ${analyses.length} analyses in this workspace`}
             right={
               <select
+                aria-label="Predicted class for gate analysis"
                 value={gateClass}
                 onChange={(e) => setGateClass(e.target.value as ClassLabel)}
                 className="rounded-control border border-input bg-card px-2 py-1 text-[11px]"

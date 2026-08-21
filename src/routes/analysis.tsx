@@ -135,6 +135,7 @@ function AnalysisPage() {
       actions={
         analyses.length > 0 ? (
           <select
+            aria-label="Choose an analysis to view"
             value={activeId ?? ""}
             onChange={(e) => {
               setSelectedId(e.target.value);
@@ -161,6 +162,7 @@ function AnalysisPage() {
         right={
           <div className="flex flex-wrap items-center gap-2">
             <select
+              aria-label="EEG channel"
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
               className="rounded-control border border-input bg-card px-2 py-1 text-[11px]"
@@ -175,6 +177,7 @@ function AnalysisPage() {
               <span className="label-xs">zoom</span>
               <input
                 type="range"
+                aria-label="Zoom"
                 min={1}
                 max={8}
                 step={0.5}
@@ -188,6 +191,7 @@ function AnalysisPage() {
               <span className="label-xs">pan</span>
               <input
                 type="range"
+                aria-label="Pan through the recording"
                 min={0}
                 max={maxOffset}
                 step={1}

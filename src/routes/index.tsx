@@ -1,22 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { DashboardView } from "@/components/views/DashboardView";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+/**
+ * `/` redirects to `/dashboard`.
+ *
+ * Both routes used to mount `DashboardView` directly with different <title>
+ * tags, which meant one page reachable at two URLs — duplicate content, and no
+ * canonical for anything linking to it. One page, one address.
+ */
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "QSFE-Net — EEG Dementia Screening Dashboard" },
-      {
-        name: "description",
-        content:
-          "Research dashboard for QSFE-Net: gated four-stream EEG analysis for early dementia and MCI screening on the CAUEEG dataset.",
-      },
-      { property: "og:title", content: "QSFE-Net — EEG Dementia Screening Dashboard" },
-      {
-        property: "og:description",
-        content:
-          "Lightweight interpretable EEG deep-learning platform: 830 features, four gated streams, 79,431 parameters.",
-      },
-    ],
-  }),
-  component: DashboardView,
+  beforeLoad: () => {
+    throw redirect({ to: "/dashboard", replace: true });
+  },
 });
