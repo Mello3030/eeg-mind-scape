@@ -65,7 +65,7 @@ def main() -> int:
                 json={
                     "name": "Smoke Test",
                     "email": "smoke@qsfe.lab",
-                    "password": "smoketest123",
+                    "password": "Sm0keTestPass",
                     "role": "researcher",
                 },
             )
@@ -105,7 +105,7 @@ def run(client: TestClient, args) -> None:
     # --- ownership ---------------------------------------------------------
     other = client.post(
         "/api/auth/register",
-        json={"name": "Other", "email": "other@qsfe.lab", "password": "othertest123",
+        json={"name": "Other", "email": "other@qsfe.lab", "password": "0therTestPass",
               "role": "researcher"},
     ).json()["token"]
     other_headers = {"Authorization": f"Bearer {other}"}
@@ -124,6 +124,16 @@ def run(client: TestClient, args) -> None:
         "unauthenticated request is rejected",
         client.get("/api/patients", headers={"Authorization": "Bearer nope"}).status_code == 401,
     )
+
+    # --- hardening ---------------------------------------------------------
+    check("weak password is rejected", client.post(
+        "/api/auth/register",
+        json={"name": "W", "email": "weak@qsfe.lab", "password": "password",
+              "role": "researcher"}).status_code == 422)
+    check("non-EDF upload is rejected before decode", client.post(
+        "/api/analyses",
+        files={"file": ("fake.edf", b"definitely not edf" * 8, "application/octet-stream")},
+        data={"patient_id": patient_id}).status_code == 415)
 
     listing = client.get("/api/patients", params={"search": "test"}).json()
     check("GET /api/patients?search", listing["total"] >= 1, f"{listing['total']} match")
@@ -239,6 +249,15 @@ def run(client: TestClient, args) -> None:
         check("GET /api/reports/{id}?format=html",
               html.status_code == 200 and "QSFE-Net EEG Analysis Report" in html.text,
               f"{len(html.text):,} chars")
+
+        # A bare jinja2.Template does not autoescape, which made the patient name
+        # a stored-XSS vector in a shared report. Rename, re-render, restore.
+        payload = "<script>alert(1)</script>"
+        client.patch(f"/api/patients/{patient_id}", json={"name": payload})
+        tainted = client.get(f"/api/reports/{target}", params={"format": "html"}).text
+        check("HTML report escapes operator text (XSS)",
+              payload not in tainted and "&lt;script&gt;" in tainted)
+        client.patch(f"/api/patients/{patient_id}", json={"name": "Test Patient"})
 
         pdf = client.get(f"/api/reports/{target}", params={"format": "pdf"})
         check("GET /api/reports/{id}?format=pdf",

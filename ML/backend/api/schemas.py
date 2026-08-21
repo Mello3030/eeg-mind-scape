@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # --- Auth -------------------------------------------------------------------
@@ -18,10 +18,33 @@ class UserOut(BaseModel):
     role: str
 
 
+_COMMON_PASSWORDS = {
+    "password", "password1", "password123", "12345678", "123456789", "1234567890",
+    "qwertyui", "qwerty123", "letmein1", "welcome1", "abc12345", "iloveyou",
+    "admin123", "root1234", "changeme", "football",
+    "baseball", "sunshine", "princess", "trustno1", "passw0rd", "p@ssw0rd",
+}
+
+
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     email: str = Field(min_length=3, max_length=255)
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def _not_obvious(cls, value: str) -> str:
+        """Reject the passwords an attacker tries first.
+
+        Deliberately not a complexity policy — forcing symbols and digits pushes
+        people toward `Password1!` and a sticky note. This only blocks the
+        handful of strings that are guessed immediately.
+        """
+        if value.lower() in _COMMON_PASSWORDS:
+            raise ValueError("That password is too common. Choose something less predictable.")
+        if len(set(value)) < 5:
+            raise ValueError("Password needs more variety than that.")
+        return value
     role: str = Field(default="researcher")
 
 

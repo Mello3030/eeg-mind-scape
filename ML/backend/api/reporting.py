@@ -187,7 +187,8 @@ HTML_TEMPLATE = Template(
 
   <footer>{{ r.disclaimer }}</footer>
 </body>
-</html>"""
+</html>""",
+    autoescape=True,
 )
 
 _BIOMARKER_LABELS = {

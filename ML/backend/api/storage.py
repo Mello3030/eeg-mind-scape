@@ -23,6 +23,10 @@ class UploadTooLarge(ValueError):
     pass
 
 
+class NotAnEdf(ValueError):
+    """Content does not begin with an EDF header."""
+
+
 class EmptyUpload(ValueError):
     pass
 
@@ -51,9 +55,21 @@ async def save_upload(upload: UploadFile, suffix: str = ".edf") -> StoredFile:
 
     digest = hashlib.sha256()
     written = 0
+    first_chunk = True
     try:
         with tmp_path.open("wb") as out:
             while chunk := await upload.read(CHUNK):
+                # EDF and BDF both start with an 8-byte version field: "0" padded
+                # with spaces for EDF, 0xFF + "BIOSEMI" for BDF. Checking it here
+                # rejects a mislabelled file before writing hundreds of MB that
+                # can only fail at decode.
+                if first_chunk:
+                    first_chunk = False
+                    if not _looks_like_edf(chunk):
+                        raise NotAnEdf(
+                            "This file is not in European Data Format. Its contents do not "
+                            "start with an EDF or BDF header, whatever the file extension says."
+                        )
                 written += len(chunk)
                 if written > settings.max_upload_bytes:
                     raise UploadTooLarge(
@@ -81,6 +97,17 @@ async def save_upload(upload: UploadFile, suffix: str = ".edf") -> StoredFile:
 
     shutil.move(str(tmp_path), final)
     return StoredFile(final, sha, written)
+
+
+def _looks_like_edf(head: bytes) -> bool:
+    """True when the buffer opens with an EDF or BDF version field."""
+    if len(head) < 8:
+        return False
+    if head[:8] == b"0       ":          # EDF / EDF+
+        return True
+    if head[0] == 0xFF and head[1:8] == b"BIOSEMI":  # BDF (Biosemi)
+        return True
+    return False
 
 
 def _destination(sha: str, suffix: str) -> Path:

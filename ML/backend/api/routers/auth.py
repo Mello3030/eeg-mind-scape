@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from .. import auth
 from ..db import get_db
+from ..ratelimit import client_key, enforce, login_limiter, register_limiter
 from ..models import User
 from ..schemas import LoginRequest, RegisterRequest, TokenResponse, UserOut
 
@@ -25,7 +26,10 @@ def _normalise_email(email: str) -> str:
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenResponse:
+def register(
+    payload: RegisterRequest, request: Request, db: Session = Depends(get_db)
+) -> TokenResponse:
+    enforce(register_limiter, request)
     email = _normalise_email(payload.email)
     if payload.role not in auth.ROLES:
         raise HTTPException(
@@ -47,7 +51,10 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenRe
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
+def login(
+    payload: LoginRequest, request: Request, db: Session = Depends(get_db)
+) -> TokenResponse:
+    enforce(login_limiter, request)
     email = payload.email.strip().lower()
     user = db.query(User).filter(User.email == email).first()
 
@@ -61,6 +68,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
         user.password_hash = auth.hash_password(payload.password)
         db.commit()
 
+    # A few typos followed by the right password should not leave the researcher
+    # throttled for the rest of the window.
+    login_limiter.reset(client_key(request))
     return TokenResponse(token=auth.create_token(user), user=UserOut.model_validate(user))
 
 

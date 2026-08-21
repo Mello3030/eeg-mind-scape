@@ -8,6 +8,8 @@ recording always yields the same prediction.
 
 from __future__ import annotations
 
+import logging
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,13 +39,24 @@ class Recording:
         return int(self.signal.shape[1])
 
 
+logger = logging.getLogger("qsfe.preprocessing")
+
+_UNREADABLE = (
+    "This file could not be read as EDF. Check that it is a European Data Format "
+    "recording and that it is not truncated."
+)
+
+
 def read_edf(path: str | Path) -> Recording:
     """Read an EDF file and return its first 19 channels at 200 Hz."""
     path = Path(path)
     try:
         reader = pyedflib.EdfReader(str(path))
     except Exception as exc:  # pyedflib raises bare OSError/Exception
-        raise SignalError(f"Could not open EDF file: {exc}") from exc
+        # pyedflib puts the absolute path in its message, which would expose the
+        # server's filesystem layout to any client. Keep it in the log instead.
+        logger.warning("EDF open failed for %s: %s", path, exc)
+        raise SignalError(_UNREADABLE) from exc
 
     try:
         n_source = reader.signals_in_file
@@ -106,7 +119,8 @@ def read_edf_window(
     try:
         reader = pyedflib.EdfReader(str(path))
     except Exception as exc:
-        raise SignalError(f"Could not open EDF file: {exc}") from exc
+        logger.warning("EDF open failed for %s: %s", path, exc)
+        raise SignalError(_UNREADABLE) from exc
 
     try:
         labels = list(reader.getSignalLabels())[:N_EEG_CHANNELS]
