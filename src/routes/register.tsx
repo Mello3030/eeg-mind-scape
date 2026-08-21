@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AuthLayout, Field } from "@/routes/login";
 import { useAuth, type Role } from "@/context/AuthContext";
 
@@ -19,13 +19,18 @@ export const Route = createFileRoute("/register")({
 });
 
 function RegisterPage() {
-  const { register } = useAuth();
+  const { register, user } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("researcher");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (user) navigate({ to: "/dashboard" });
+  }, [user, navigate]);
 
   return (
     <AuthLayout
@@ -37,11 +42,20 @@ function RegisterPage() {
         onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
+          // The API rejects anything shorter; catching it here avoids a round
+          // trip and a raw validation message.
+          if (password.length < 8) {
+            setError("Password must be at least 8 characters.");
+            return;
+          }
+          setBusy(true);
           try {
             await register({ name, email, password, role });
             navigate({ to: "/dashboard" });
           } catch (err) {
             setError(err instanceof Error ? err.message : "Registration failed.");
+          } finally {
+            setBusy(false);
           }
         }}
       >
@@ -63,15 +77,16 @@ function RegisterPage() {
         {error && <p className="text-[11px] text-destructive">{error}</p>}
         <button
           type="submit"
-          className="w-full rounded-control bg-primary px-3 py-2 text-xs font-medium text-primary-foreground"
+          disabled={busy}
+          className="w-full rounded-control bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
         >
-          Create account
+          {busy ? "Creating account…" : "Create account"}
         </button>
         <p className="text-[11px] text-muted-foreground">
           Already registered?{" "}
-          <a href="/login" className="text-primary hover:underline">
+          <Link to="/login" className="text-primary hover:underline">
             Sign in
-          </a>
+          </Link>
         </p>
       </form>
     </AuthLayout>

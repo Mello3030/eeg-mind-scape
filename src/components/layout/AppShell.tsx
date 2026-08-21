@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   BrainCircuit,
@@ -77,7 +77,14 @@ export function AppShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Signing out on a data page would otherwise leave every panel 401ing in place.
+  const signOut = () => {
+    logout();
+    navigate({ to: "/login" });
+  };
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { data: health, isError: apiOffline } = useQuery({
@@ -128,7 +135,7 @@ export function AppShell({
                   <button
                     aria-label="Sign out"
                     title="Sign out"
-                    onClick={logout}
+                    onClick={signOut}
                     className="shrink-0 rounded-control p-1.5 text-sidebar-foreground/50 transition-colors duration-150 hover:bg-white/10 hover:text-sidebar-accent-foreground"
                   >
                     <LogOut className="size-3.5" />
@@ -264,7 +271,7 @@ export function AppShell({
           groups={ALL_GROUPS}
           isActive={isActive}
           user={user}
-          logout={logout}
+          logout={signOut}
         />
 
         <main className="flex-1 px-4 py-6 lg:px-8">

@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Brain } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/login")({
@@ -19,12 +19,17 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("researcher@qsfe.lab");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Landing here with a live session is a dead end otherwise.
+  useEffect(() => {
+    if (user) navigate({ to: "/dashboard" });
+  }, [user, navigate]);
 
   return (
     <AuthLayout title="Sign in" subtitle="Researcher access to the QSFE-Net analysis workspace">
@@ -56,15 +61,10 @@ function LoginPage() {
         </button>
         <p className="text-[11px] text-muted-foreground">
           No account?{" "}
-          <a href="/register" className="text-primary hover:underline">
+          <Link to="/register" className="text-primary hover:underline">
             Register
-          </a>{" "}
+          </Link>{" "}
           · The dashboard is publicly viewable in this demo build.
-        </p>
-        <p className="text-[11px] text-muted-foreground">
-          Demo accounts: <span className="num">researcher@qsfe.lab</span> /{" "}
-          <span className="num">admin@qsfe.lab</span>, password{" "}
-          <span className="num">research123</span>.
         </p>
       </form>
     </AuthLayout>

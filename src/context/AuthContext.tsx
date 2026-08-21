@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   apiLogin,
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     let cancelled = false;
@@ -56,20 +58,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       login: async (email, password) => {
         const u = await apiLogin(email, password);
+        // Anything cached belongs to whoever was signed in before.
+        queryClient.clear();
         setUser(u);
         return u;
       },
       register: async (input) => {
         const u = await apiRegister(input);
+        queryClient.clear();
         setUser(u);
         return u;
       },
       logout: () => {
         setToken(null);
         setUser(null);
+        // Without this the next visitor sees the previous user's patients and
+        // analyses from the React Query cache until each query refetches.
+        queryClient.clear();
       },
     }),
-    [user, ready],
+    [user, ready, queryClient],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
