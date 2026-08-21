@@ -44,11 +44,14 @@ obsolete: `main.py` now sets `allow_origin_regex` to any `localhost`/`127.0.0.1`
 port, so whichever port Vite lands on will work. (8080 is usually taken by
 EnterpriseDB, so it typically serves on 8081.)
 
-**`09-analysis.png` is out of date.** `/analysis` has since gained two panels —
-"Model prediction vs actual diagnosis" and the four-stream "Why this recording
-was classified X" explanation — and its channel picker now lists all 19 channels
-instead of only Fp1. Re-capture that figure before submitting; the other twelve
-are unaffected.
+**Four figures were re-captured** after the defect fixes, at the same 1500 px
+width and 2× device scale as the originals: `02-register` (registration code
+field), `03-dashboard` and `07-predictions` (the *vs truth* column, previously
+blank — defect 7), and `09-analysis` (all 19 channels, the predicted-vs-actual
+panel and the per-stream rationale). `09-analysis` is cropped just below the
+rationale panel so the figure keeps roughly its original aspect ratio; the
+four-stream explorer continues past the crop. Those four show a 9-patient
+workspace rather than the 15-patient one behind the other nine.
 
 ## Still to check
 
@@ -60,8 +63,8 @@ are unaffected.
    volume/page numbers were written without web access — verify on Scholar.
 3. **Timeline months** were inferred from git history and file timestamps.
    Correct the gantt chart and Table 13 to your actual schedule.
-4. **Re-capture `09-analysis.png`** and reconcile Observation D in `report.tex`
-   with the defect list below — both are stale as of the latest fixes.
+4. ~~Recompile the PDF.~~ Done --- rebuilt with Obs. 9 included (Tectonic 0.17,
+   35 pages, no LaTeX warnings, no undefined references).
 
 ## Numbers
 
@@ -85,12 +88,13 @@ validation, and why S3/S4 draw low gate activations — currently the report onl
 has the accuracy-side evidence for that claim. Regenerate with
 `python backend/scripts/build_reference.py`.
 
-Observation D logs five defects found during verification. **Four are now fixed,
-and three further defects were found while fixing them — eight in total.**
+Observation D logs **nine defects, eight fixed** — the original five, plus four
+found while fixing them. `report.tex` Table 11 and the Observation D heading are
+up to date with the list below.
 
-> ⚠️ **`report.tex` has not been updated.** Its Observation D section still says
-> "five defects found, two fixed". Only this README reflects the current state;
-> reconcile Section 6.4 and the Observation D table before submitting.
+`report.pdf` is current: 35 pages, built from this `.tex` with all nine defects
+and the four re-captured figures in. Rebuild after any further edit with
+`tectonic report.tex` (or upload to Overleaf).
 
 **Fixed:**
 
@@ -122,6 +126,14 @@ and three further defects were found while fixing them — eight in total.**
   *that request asked for*. The viewer fetches one channel at a time, so the
   picker was built from a one-element list and only ever offered Fp1. The
   response now also carries `available_channels`; all 19 are selectable.
+- **Obs. 9** — `POST /api/analyses` with no `patient_id` scored the recording,
+  stored it, then returned **404**. Ownership is derived from the patient, so a
+  patient-less prediction matches no owner and the closing `_get_or_404` could
+  not read back the row the route had just written. It was orphaned: absent from
+  history, 404 on direct fetch, visible only to an administrator. Both storing
+  routes now refuse with 422 before scoring anything, and the smoke test asserts
+  it (34 checks). The browser never hit this — its upload form always creates a
+  patient first.
 
 **Open:**
 
@@ -129,7 +141,10 @@ and three further defects were found while fixing them — eight in total.**
 
 Obs. 6–8 share one root cause worth a sentence in the report: fields were added
 to `PredictionDetail` when the list and summary paths needed them too, and
-nothing failed loudly — the UI just rendered blanks.
+nothing failed loudly — the UI just rendered blanks. Obs. 9 is the mirror image:
+ownership was expressible only through the patient relation, so a row without a
+patient could be written but never read back. All four were invisible from the
+browser and appeared only when the API was driven directly.
 
 ## Note on the ownership migration
 
@@ -139,10 +154,10 @@ the new model, and Observation F covers it.
 
 The migration reset the database. With Obs. 5 fixed, `--cohort` repopulates it:
 the workspace now holds 3 accounts and a 9-patient CAUEEG cohort owned by
-`researcher@qsfe.lab` (4/9 predicted correctly). Table 6 and all screenshots
-predate the migration and are labelled "at capture time"; the counts differ from
-the current workspace, but the screens render identically and the run is
-reproducible again with:
+`researcher@qsfe.lab` (4/9 predicted correctly). Table 6 and the nine
+un-recaptured screenshots predate the migration and are labelled "at capture
+time"; the four re-captured figures show the current 9-patient workspace. The
+screens render identically either way, and the run is reproducible again with:
 
 ```bash
 python backend/scripts/seed.py --cohort 9

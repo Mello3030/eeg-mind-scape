@@ -679,7 +679,12 @@ auto-generated CAUEEG code is therefore qualified per owner
 dataset serial without colliding, each getting their own patient row. A nullable
 \code{dataset\_serial} links a row to a CAUEEG record~\cite{kim2023}, which is
 what lets ground truth be shown for benchmark subjects and withheld for uploads
---- the evaluated/unevaluated distinction of~\cite{mitchell2019}. Writes are
+--- the evaluated/unevaluated distinction of~\cite{mitchell2019}. An upload whose
+filename is a dataset serial recovers that record's label, but the label carries how
+it was established: \code{filename} when only the name matched,
+\code{content\_sha256} when the uploaded bytes hash to the dataset EDF. A hash that
+disagrees withholds the label outright rather than attaching one subject's diagnosis
+to another's recording. Writes are
 idempotent by serial \emph{within an owner}. \\
 \addlinespace[2pt]
 M3 & Ingestion &
@@ -780,8 +785,10 @@ which is exactly how Obs.~4 arose. \\
 
 \subsection{Security and degradation}
 
-Argon2id credentials; pinned-algorithm expiring JWTs; CORS restricted to an
-explicit allow-list; upload extension
+Argon2id credentials; pinned-algorithm expiring JWTs; registration gated by a
+shared invite code checked server-side, so a reachable instance does not collect
+accounts from anyone who finds it; CORS restricted to an explicit allow-list plus
+any loopback origin for local development; upload extension
 allow-list, byte cap enforced during streaming, empty-file rejection and
 temp-file cleanup on every failure path; a startup warning when the signing
 secret is unset. A missing checkpoint, catalog or feature cache produces an
@@ -844,8 +851,10 @@ Live workspace at capture time: uploads / analyses & 5 / 14 \\
 \label{sec:walk}
 
 Every screenshot below was captured from a live instance
-(\code{qsfe\_npz\_best.pth} on CUDA, 15 patients and 14 stored analyses)
-using an automated browser at 1500\,px width. Table~\ref{tab:pages} summarises
+(\code{qsfe\_npz\_best.pth} on CUDA) using an automated browser at 1500\,px
+width. Most were taken with 15 patients and 14 stored analyses; the four
+re-captured after the defect fixes of Table~\ref{tab:def} show a 9-patient
+cohort, the workspace \code{seed.py --cohort 9} reproduces. Table~\ref{tab:pages} summarises
 what each screen does and the endpoints behind it; the figures follow.
 
 \begin{table}[H]\centering\caption{Every screen, its function, and the endpoints behind it. The \code{/api} prefix is omitted in the last column.}
@@ -854,19 +863,19 @@ what each screen does and the endpoints behind it; the figures follow.
 \toprule
 \textbf{Route} & \textbf{LoC} & \textbf{What it does} & \textbf{Endpoints} \\
 \midrule
-\code{/login} & 178 & Credential entry; on success stores the JWT and clears any cached data from a previous session. Demo accounts are hinted inline. & \code{POST /auth/login} \\
-\code{/register} & 79 & Account creation with a researcher/administrator role choice. & \code{POST /auth/register} \\
-\code{/dashboard} & 438 & Overview of \emph{the caller's own} records (an administrator sees the whole instance): analysis counts by predicted class, mean confidence, measured test accuracy and macro-F1, per-class metric bars, agreement with CAUEEG ground truth over labelled recordings only, mean gate weights by predicted class, an analyses-per-day trend, and recent activity. & \code{/history/stats} \newline \code{/history} \newline \code{/patients} \newline \code{/model/info} \newline \code{/model/performance} \\
-\code{/patients} & 133 & Cohort registry, scoped to the patients this researcher created: de-identified code, age, sex, analysis and upload counts, latest prediction, searchable. & \code{GET /patients} \\
-\code{/patients/:id} & 352 & One subject: identifying fields, class-probability trajectory across sessions, distinct source recordings, gate-weight history, and the full analysis list. & \code{GET /patients/\{id\}} \newline \code{/history/patients/} \code{\{id\}/timeline} \\
+\code{/login} & 311 & Credential entry; on success stores the JWT and clears any cached data from a previous session. Demo accounts are hinted inline. & \code{POST /auth/login} \\
+\code{/register} & 112 & Account creation with a researcher/administrator role choice, gated by a shared registration code. The field is a convenience: the code is verified server-side, so posting to the endpoint directly without it is refused. & \code{POST /auth/register} \\
+\code{/dashboard} & 415 & Overview of \emph{the caller's own} records (an administrator sees the whole instance): analysis counts by predicted class, mean confidence, measured test accuracy and macro-F1, per-class metric bars, agreement with CAUEEG ground truth over labelled recordings only, mean gate weights by predicted class, an analyses-per-day trend, and recent activity. & \code{/history/stats} \newline \code{/history} \newline \code{/patients} \newline \code{/model/info} \newline \code{/model/performance} \\
+\code{/patients} & 135 & Cohort registry, scoped to the patients this researcher created: de-identified code, age, sex, analysis and upload counts, latest prediction, searchable. & \code{GET /patients} \\
+\code{/patients/:id} & 353 & One subject: identifying fields, class-probability trajectory across sessions, distinct source recordings, gate-weight history, and the full analysis list. & \code{GET /patients/\{id\}} \newline \code{/history/patients/} \code{\{id\}/timeline} \\
 \code{/upload} & 289 & Drag-and-drop EDF with client-side type and size validation, patient metadata form, a staged UPLOAD/PROCESSING/COMPLETED indicator, the inference pipeline described alongside, and a submit path gated on the live health check. & \code{POST /analyses} \newline \code{/health} \\
 \code{/predictions} & 149 & Filterable history of every analysis the caller can reach: prediction, confidence, source kind, patient, timestamp. & \code{GET /history} \\
-\code{/predictions/:id} & 451 & The interpretability report for one analysis: class probabilities, the four gate weights as relative stream contributions with the dominant stream named, decoded biomarkers per stream, provenance (checkpoint, device, crops, hash, timings) and JSON/HTML/PDF export. & \code{GET /analyses/\{id\}} \newline \code{/reports/\{id\}} \\
-\code{/analysis} & 513 & EEG viewer over the source EDF with channel selection, zoom and pan, the scored crop windows shaded on the timeline, plus per-stream feature exploration and that stream's gate activation across the workspace. & \code{/analyses/\{id\}/} \code{waveform} \newline \code{GET /analyses/\{id\}} \\
-\code{/model} & 281 & Architecture view with the forward pass laid out stream by stream, and measured gate analysis aggregated over stored analyses. & \code{/model/info} \newline \code{GET /history} \\
-\code{/performance} & 411 & Confusion matrix, per-class precision/recall/F1/support, the ablation table labelled with the split it used, and published baselines marked as external. & \code{/model/performance} \newline \code{/model/ablation} \\
-\code{/settings} & 250 & Account details, active model, checkpoint inventory with stream dimensions and extractor compatibility, and the resolved server environment. & \code{/model/checkpoints} \newline \code{POST /model/reload} \newline \code{/health} \\
-\code{/about} & 179 & Scientific background, the four streams, and an explicit limitations section --- the platform's model-facts page~\cite{sendak2020}. & \code{/model/info} \newline \code{/model/performance} \\
+\code{/predictions/:id} & 452 & The interpretability report for one analysis: class probabilities, the four gate weights as relative stream contributions with the dominant stream named, decoded biomarkers per stream, provenance (checkpoint, device, crops, hash, timings) and JSON/HTML/PDF export. & \code{GET /analyses/\{id\}} \newline \code{/reports/\{id\}} \\
+\code{/analysis} & 888 & EEG viewer over the source EDF with selection across all 19 channels, zoom and pan, the scored crop windows shaded on the timeline. Below it the prediction is placed against the CAUEEG label for that recording --- marked \emph{inferred} when it was recovered from an upload's filename rather than confirmed by hash --- and a per-stream panel states what each stream saw and whether it supports the predicted class, against reference distributions measured on the training split. & \code{/analyses/\{id\}/} \code{waveform} \newline \code{GET /analyses/\{id\}} \newline \code{/model/reference} \\
+\code{/model} & 282 & Architecture view with the forward pass laid out stream by stream, and measured gate analysis aggregated over stored analyses. & \code{/model/info} \newline \code{GET /history} \\
+\code{/performance} & 419 & Confusion matrix, per-class precision/recall/F1/support, the ablation table labelled with the split it used, and published baselines marked as external. & \code{/model/performance} \newline \code{/model/ablation} \\
+\code{/settings} & 316 & Account details, active model, checkpoint inventory with stream dimensions and extractor compatibility, and the resolved server environment. & \code{/model/checkpoints} \newline \code{POST /model/reload} \newline \code{/health} \\
+\code{/about} & 336 & Scientific background, the four streams, and an explicit limitations section --- the platform's model-facts page~\cite{sendak2020}. & \code{/model/info} \newline \code{/model/performance} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -933,12 +942,17 @@ causal explanation.}\label{fig:result}
 
 \begin{figure}[H]\centering
 \shot[0.97\linewidth]{09-analysis.png}
-\caption{\textbf{M7 --- EEG viewer.} A 30\,s window of the source EDF read
-server-side and decimated from 200\,Hz to 67\,Hz for display; the shaded band
-marks where the scored crops sit. The caption states explicitly that these are
-raw samples, not the z-normalised tensor the model consumed. Below, the selected
-stream is described and its gate activation summarised across the
-workspace.}\label{fig:viewer}
+\caption{\textbf{M7 --- EEG viewer and per-stream rationale.} A 30\,s window of
+the source EDF read server-side and decimated from 200\,Hz to 67\,Hz for display;
+the shaded band marks where the scored crops sit, and the caption states
+explicitly that these are raw samples, not the z-normalised tensor the model
+consumed. Below it the prediction sits beside the CAUEEG label --- here a miss,
+\emph{Normal} predicted where the recording is labelled \emph{Dementia} --- and
+each stream reports what it saw against the training-split reference. S3 and S4
+are marked \emph{no usable signal} because their markers barely separate the
+classes ($d\approx0.16$), and the conclusion states that no single stream
+supports the call. The four-stream feature explorer continues below the
+crop.}\label{fig:viewer}
 \end{figure}
 
 \begin{figure}[H]\centering
@@ -1069,10 +1083,19 @@ exists to let a researcher notice, which is the case-level behaviour
 Cai et al.~\cite{cai2019} identified as the practitioner's real need. Explaining
 \emph{why} the model weights streams this way is Phase~I territory.
 
-\textbf{Observation D --- five defects found, two fixed.} These were recorded
-rather than quietly patched, because two of them affect how results are
+\textbf{Observation D --- nine defects found, eight fixed.} These were recorded
+rather than quietly patched, because several affect how results are
 \emph{labelled} and are therefore reporting-integrity issues --- precisely the
-class of problem the measured-metrics policy exists to prevent.
+class of problem the measured-metrics policy exists to prevent. Defects 6--9
+were all found while fixing 4 and 5, and 6--8 share one cause: a field was added
+to the detail schema when the summary and list paths needed it too. None of
+those three raised an error --- the interface simply rendered a blank where a
+value should have been, which is the failure mode a typed contract is supposed
+to prevent and did not. Defect~9 is the same lesson from the other side: the
+ownership rule was expressed only through the patient relation, so a row without
+a patient was written successfully and then could not be read back by the
+account that created it. Every one of the four surfaced only when the API was
+exercised directly; the browser's own flows hid all of them.
 
 \begin{table}[H]\centering\caption{Defects found during verification and their resolution.}
 \label{tab:def}\scriptsize\renewcommand{\arraystretch}{1.15}
@@ -1107,24 +1130,60 @@ validation. Fix scheduled as T-17: a compensating delete on the failure path
 plus a sweep for unreferenced files.
 & \stOpen \\
 \addlinespace[2pt]
-4 & \code{PATCH /api/analyses/\{id\}} (edit notes) raises \code{NameError} and
-returns 500. It is also the one analyses route the ownership change left
+4 & \code{PATCH /api/analyses/\{id\}} (edit notes) raised \code{NameError} and
+returned 500. It was also the one analyses route the ownership change left
 unscoped.
-& The handler body calls \code{\_get\_or\_404(db, prediction\_id, user)}, but
-\code{user} is neither a parameter nor a local: every sibling route declares
-\code{user: User = Depends(current\_user)} and this one does not. Confirmed by
-signature inspection --- the function takes only
-\code{(prediction\_id, payload, db)}. One-line fix: add the dependency.
-Scheduled as T-16.
-& \stOpen \\
+& The handler body called \code{\_get\_or\_404(db, prediction\_id, user)}, but
+\code{user} was neither a parameter nor a local: every sibling route declares
+\code{user: User = Depends(current\_user)} and this one did not. Adding the
+dependency fixes the crash and closes the scoping gap in the same line. Verified:
+the route now returns 200 with a session and 401 without one.
+& \stFixed \\
 \addlinespace[2pt]
-5 & \code{seed.py --cohort N} raises \code{TypeError} and cannot seed a demo
+5 & \code{seed.py --cohort N} raised \code{TypeError} and could not seed a demo
 cohort.
 & \code{analyse\_dataset\_record} gained a required keyword-only
-\code{owner\_id}, but the seed script still calls it as
-\code{(db, serial, create\_patient=True)}. The script must now choose an owner
---- the demo researcher is the natural default. Scheduled as T-16.
-& \stOpen \\
+\code{owner\_id}, but the seed script still called it as
+\code{(db, serial, create\_patient=True)}. The script now files the cohort
+against the demo researcher and scopes its already-analysed check by owner.
+Verified: \code{--cohort 9} seeds nine CAUEEG patients, four predicted
+correctly.
+& \stFixed \\
+\addlinespace[2pt]
+6 & \code{PATCH /api/analyses/\{id\}} returned a body that could not contain the
+notes it had just saved.
+& \code{notes} was declared on \code{PredictionDetail} but not on
+\code{PredictionSummary}, and the route answers with a summary. The value was
+written correctly and omitted from the response, so the client mapped it back as
+\code{null}. Moved to \code{PredictionSummary}.
+& \stFixed \\
+\addlinespace[2pt]
+7 & The \emph{vs truth} column was permanently blank on every list view, for
+recordings whose ground truth is known.
+& The same schema split as defect 6: \code{ground\_truth} existed only on
+\code{PredictionDetail}, so history, dashboard and patient-timeline rows dropped
+it and the badge component was handed \code{null} every time. It rendered on the
+single-analysis screen, which is why the gap survived review. Moved to
+\code{PredictionSummary}.
+& \stFixed \\
+\addlinespace[2pt]
+8 & The EEG viewer offered only one channel, \code{Fp1}, of the 19 present.
+& The waveform endpoint returned \code{channels} as the channels \emph{that
+request asked for}. Since the viewer fetches one at a time to keep the payload
+small, the picker was built from a one-element list containing the channel
+already displayed. The response now also carries \code{available\_channels}.
+& \stFixed \\
+\addlinespace[2pt]
+9 & \code{POST /api/analyses} without a \code{patient\_id} scored the recording,
+stored it, and then answered 404.
+& Ownership is derived from the patient, so a prediction with no patient matches
+no owner: the route wrote the row and the closing
+\code{\_get\_or\_404} could not read it back. The result was orphaned --- absent
+from history, 404 on direct fetch, visible only to an administrator. Both
+storing routes now refuse up front with 422 rather than scoring a recording that
+lands nowhere, and the smoke test asserts it. The browser never triggered this,
+because the upload form always creates a patient first.
+& \stFixed \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -1299,8 +1358,8 @@ PostgreSQL for shared deployment.
 \toprule
 \textbf{Task} & \textbf{Module} & \textbf{Description} & \textbf{Target} \\
 \midrule
-\multicolumn{4}{@{}l}{\emph{Block A --- correctness first: three open defects}} \\
-T-16 & M1, M2 & Authorisation follow-ups from the ownership change: add the missing \code{current\_user} dependency to the notes route (Obs.~4) and pass an owner when seeding a cohort (Obs.~5) & Jan wk 1 \\
+\multicolumn{4}{@{}l}{\emph{Block A --- correctness first: one open defect}} \\
+T-16 & M1, M2 & Authorisation follow-ups from the ownership change: add the missing \code{current\_user} dependency to the notes route (Obs.~4) and pass an owner when seeding a cohort (Obs.~5). \textbf{Completed} --- landed together with defects 6--8 & Done \\
 T-17 & M3 & Compensating delete on post-storage failure; sweep for unreferenced files (Obs.~3) & Jan wk 1 \\
 \multicolumn{4}{@{}l}{\emph{Block B --- test coverage}} \\
 T-18 & all & Unit tests for repository, report renderers, storage, auth; 70\% line coverage target & Jan--Feb \\
