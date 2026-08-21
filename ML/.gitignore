@@ -27,7 +27,10 @@ ENV/
 *.csv
 *.parquet
 #*.npz
-caueeg-dataset/
+# Only the bulk signal data is excluded. The annotation JSON (~1.5 MB) is
+# tracked so the server can score the test split from cached features.
+caueeg-dataset/event/
+caueeg-dataset/signal/
 
 # =========================
 # Model Checkpoints
