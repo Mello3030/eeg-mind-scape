@@ -107,6 +107,12 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origins,
+    # Vite walks to the next free port when its preferred one is taken, so a dev
+    # server can land on 8081, 8083, 5174... Enumerating those was a recurring
+    # source of opaque "Failed to fetch" errors. Loopback on any port is not a
+    # meaningful boundary — anything running there is already on the machine —
+    # while deployed origins still have to be listed explicitly above.
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
