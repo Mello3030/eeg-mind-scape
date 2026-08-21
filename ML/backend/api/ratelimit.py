@@ -76,7 +76,12 @@ def enforce(limiter: RateLimiter, request: Request) -> None:
         )
 
 
-# Ten attempts per quarter hour: generous for a mistyped password, useless for a
-# script working through a wordlist.
-login_limiter = RateLimiter(limit=10, window_seconds=900)
+# Ten attempts per five minutes. Once throttled the window applies even to the
+# right password — the limiter runs before verification, so guessing correctly
+# cannot lift it — which is why the window is short. At 120 attempts an hour
+# against Argon2 a wordlist is hopeless, while someone who has genuinely
+# forgotten their password waits minutes, not a quarter of an hour.
+login_limiter = RateLimiter(limit=10, window_seconds=300)
+
+# Registration is rarer and a burst is far more suspicious, so it stays tight.
 register_limiter = RateLimiter(limit=5, window_seconds=3600)
