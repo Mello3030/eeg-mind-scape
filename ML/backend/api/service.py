@@ -186,7 +186,14 @@ def reanalyse(
         )
     path = storage.resolve(upload.stored_path)
     if not path.exists():
-        raise InferenceError(f"The stored recording is gone: {upload.stored_path}")
+        # Uploaded EDFs sit on the container filesystem, which most hosts wipe on
+        # restart. The scored result survives in the database; only the source
+        # signal is gone, so say that rather than surfacing a bare path.
+        raise InferenceError(
+            f"The source recording '{upload.filename}' is no longer on the server, so this "
+            "analysis cannot be re-run. Its stored results and biomarkers are unaffected. "
+            "Upload the recording again to score it with the current checkpoint."
+        )
 
     result = predict_edf(path, n_crops, True, True)
     result["source"] = {"kind": "upload", "filename": upload.filename}

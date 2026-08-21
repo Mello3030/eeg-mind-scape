@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .. import crud
 from ..auth import current_user, scope_of
 from ..db import get_db
-from ..models import Patient, User
+from ..models import Patient, Prediction, User
 from ..schemas import (
     PatientCreate,
     PatientDetail,
@@ -23,8 +23,16 @@ router = APIRouter(prefix="/api/patients", tags=["patients"])
 
 
 def _detail(db: Session, patient: Patient) -> PatientDetail:
+    """Single-patient detail. The list route uses `_detail_from` instead, so it
+    does not pay these two queries per row."""
     n_predictions, n_uploads = crud.patient_counts(db, patient.id)
     latest = crud.latest_prediction(db, patient.id)
+    return _detail_from(patient, n_predictions, n_uploads, latest)
+
+
+def _detail_from(
+    patient: Patient, n_predictions: int, n_uploads: int, latest: Prediction | None
+) -> PatientDetail:
     return PatientDetail(
         **PatientOut.model_validate(patient).model_dump(),
         n_predictions=n_predictions,
@@ -67,11 +75,16 @@ def list_patients(
     user: User = Depends(current_user),
 ) -> PatientListResponse:
     patients, total = crud.list_patients(db, search, limit, offset, owner_id=scope_of(user))
+    # Aggregate once for the whole page rather than three queries per row.
+    summaries = crud.patient_summaries(db, [p.id for p in patients])
     return PatientListResponse(
         total=total,
         limit=limit,
         offset=offset,
-        items=[_detail(db, p) for p in patients],
+        items=[
+            _detail_from(p, *summaries.get(p.id, (0, 0, None)))
+            for p in patients
+        ],
     )
 
 

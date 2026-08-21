@@ -27,7 +27,6 @@ import {
   type ClassLabel,
   dashboardStats,
   listAnalyses,
-  listPatients,
   modelInfo,
   modelPerformance,
 } from "@/services/api";
@@ -37,7 +36,6 @@ const axis = { stroke: "var(--muted-foreground)", fontSize: 11 } as const;
 export function DashboardView() {
   const { data: stats } = useQuery({ queryKey: ["dashboardStats"], queryFn: dashboardStats });
   const { data: analyses } = useQuery({ queryKey: ["analyses"], queryFn: listAnalyses });
-  const { data: patients } = useQuery({ queryKey: ["patients"], queryFn: listPatients });
   const { data: model } = useQuery({
     queryKey: ["modelInfo"],
     queryFn: modelInfo,
@@ -64,9 +62,10 @@ export function DashboardView() {
       distribution: CLASSES.map((c) => ({ name: c, value: 0 })),
     },
     analyses: rows.slice(0, 8),
-    // `listAnalyses` is capped at 200 rows, so anything workspace-wide is taken
-    // from /api/history/stats, which aggregates server-side over every record.
-    patients: stats?.patients ?? patients?.length ?? 0,
+    // Workspace-wide figures come from /api/history/stats, which aggregates
+    // server-side over every record. Fetching the patient list purely to count
+    // it was the single most expensive request on this page.
+    patients: stats?.patients ?? 0,
     trend: buildTrend(stats?.dailyCounts),
   };
 

@@ -189,7 +189,7 @@ function toPatient(p: RawPatient): Patient {
 }
 
 export async function listPatients(): Promise<PatientRow[]> {
-  const res = await request<{ items: RawPatient[] }>(`/api/patients${qs({ limit: 200 })}`);
+  const res = await request<{ items: RawPatient[] }>(`/api/patients${qs({ limit: 50 })}`);
   return res.items.map((p) => ({
     ...toPatient(p),
     analyses: p.n_predictions ?? 0,
@@ -201,7 +201,7 @@ export async function listPatients(): Promise<PatientRow[]> {
 export async function getPatient(id: string): Promise<PatientDetail> {
   const [raw, history] = await Promise.all([
     request<RawPatient>(`/api/patients/${id}`),
-    request<{ items: RawAnalysis[] }>(`/api/history${qs({ patient_id: id, limit: 200 })}`),
+    request<{ items: RawAnalysis[] }>(`/api/history${qs({ patient_id: id, limit: 50 })}`),
   ]);
   return { ...toPatient(raw), analyses: history.items.map(toAnalysis) };
 }
@@ -403,7 +403,7 @@ function toAnalysisDetail(a: RawAnalysis): AnalysisDetail {
 /** Most recent analyses across the workspace. Safe to use directly as a
  * react-query queryFn, so it takes no arguments. */
 export async function listAnalyses(): Promise<Analysis[]> {
-  const res = await request<{ items: RawAnalysis[] }>(`/api/history${qs({ limit: 200 })}`);
+  const res = await request<{ items: RawAnalysis[] }>(`/api/history${qs({ limit: 50 })}`);
   return res.items.map(toAnalysis);
 }
 

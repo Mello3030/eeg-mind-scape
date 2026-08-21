@@ -69,6 +69,11 @@ function AnalysisPage() {
       }),
     enabled: !!activeId,
     retry: false,
+    // The key includes channel/offset/window, so every control nudge is a new
+    // request. Hold the previous trace while the next one loads instead of
+    // blanking the chart, and keep recently viewed windows warm.
+    placeholderData: (previous) => previous,
+    staleTime: 5 * 60_000,
   });
 
   const stream = STREAMS.find((s) => s.id === tab)!;

@@ -102,6 +102,51 @@ def delete_patient(db: Session, patient: Patient) -> int:
     return removed
 
 
+def patient_summaries(
+    db: Session, patient_ids: list[str]
+) -> dict[str, tuple[int, int, "Prediction | None"]]:
+    """Counts and latest prediction for many patients in three queries.
+
+    The list endpoint used to call ``patient_counts`` and ``latest_prediction``
+    per row, which is 3n queries — 78 for 25 patients, and multiple seconds once
+    the database is a network hop away. Aggregating once keeps the page flat as
+    the cohort grows.
+    """
+    if not patient_ids:
+        return {}
+
+    predictions = dict(
+        db.execute(
+            select(Prediction.patient_id, func.count())
+            .where(Prediction.patient_id.in_(patient_ids))
+            .group_by(Prediction.patient_id)
+        ).all()
+    )
+    uploads = dict(
+        db.execute(
+            select(Upload.patient_id, func.count())
+            .where(Upload.patient_id.in_(patient_ids))
+            .group_by(Upload.patient_id)
+        ).all()
+    )
+
+    # One ordered pass, keeping the first row seen per patient. The existing
+    # ix_predictions_patient_created index covers this ordering.
+    latest: dict[str, Prediction] = {}
+    for row in db.scalars(
+        select(Prediction)
+        .where(Prediction.patient_id.in_(patient_ids))
+        .order_by(Prediction.patient_id, Prediction.created_at.desc())
+    ):
+        if row.patient_id is not None and row.patient_id not in latest:
+            latest[row.patient_id] = row
+
+    return {
+        pid: (int(predictions.get(pid, 0)), int(uploads.get(pid, 0)), latest.get(pid))
+        for pid in patient_ids
+    }
+
+
 def patient_counts(db: Session, patient_id: str) -> tuple[int, int]:
     predictions = db.scalar(
         select(func.count()).select_from(Prediction).where(Prediction.patient_id == patient_id)
