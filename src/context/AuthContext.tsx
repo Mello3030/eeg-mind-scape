@@ -22,6 +22,7 @@ interface AuthValue {
     email: string;
     password: string;
     role: Role;
+    registrationCode: string;
   }) => Promise<SessionUser>;
   logout: () => void;
 }

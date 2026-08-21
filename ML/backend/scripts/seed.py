@@ -42,8 +42,13 @@ def seed_accounts(db) -> int:
     return created
 
 
-def seed_cohort(db, count: int) -> int:
-    """Score a spread of test-split patients so the dashboard has real content."""
+def seed_cohort(db, count: int, owner: User) -> int:
+    """Score a spread of test-split patients so the dashboard has real content.
+
+    Patients are owned, so the cohort is filed against one account — the demo
+    researcher — rather than a shared workspace. `scope_of` then shows it to that
+    researcher and to any administrator.
+    """
     try:
         catalog = get_catalog()
         records = [r for r in catalog.all_records() if r["split"] == "test"]
@@ -65,11 +70,13 @@ def seed_cohort(db, count: int) -> int:
     created = 0
     for record in chosen:
         serial = record["serial"]
-        if crud.get_patient_by_serial(db, serial):
+        if crud.get_patient_by_serial(db, serial, owner_id=owner.id):
             print(f"  = CAUEEG-{serial} already analysed")
             continue
         try:
-            prediction = service.analyse_dataset_record(db, serial, create_patient=True)
+            prediction = service.analyse_dataset_record(
+                db, serial, owner_id=owner.id, create_patient=True
+            )
         except (ModelError, ValueError, KeyError) as exc:
             print(f"  ! {serial}: {exc}")
             continue
@@ -101,8 +108,13 @@ def main() -> None:
         accounts = seed_accounts(db)
         cohort = 0
         if args.cohort:
-            print(f"\nCohort ({args.cohort} patients):")
-            cohort = seed_cohort(db, args.cohort)
+            # Patients are owned now, so the cohort needs an account to belong to.
+            owner = db.query(User).filter(User.email == DEMO_ACCOUNTS[0]["email"]).first()
+            if owner is None:
+                print(f"  ! {DEMO_ACCOUNTS[0]['email']} is missing, cannot own the cohort")
+            else:
+                print(f"\nCohort ({args.cohort} patients, owned by {owner.email}):")
+                cohort = seed_cohort(db, args.cohort, owner)
     finally:
         db.close()
 

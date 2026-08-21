@@ -13,6 +13,7 @@ from ..evaluation import cached_only, evaluate_split, invalidate
 from ..config import get_settings
 from ..constants import EXTRACTOR_DIMS, STREAM_INFO
 from ..model import ModelError, load_model, registry
+from ..reference import load_reference, reference_path
 from ..schemas import (
     CheckpointInfo,
     HealthResponse,
@@ -151,3 +152,29 @@ def model_ablation() -> dict:
         ),
         "active_checkpoint_accuracy": measured["accuracy"] if measured else None,
     }
+
+
+@router.get("/model/reference")
+async def model_reference(
+    refresh: bool = Query(False, description="Recompute instead of using the cache."),
+) -> dict:
+    """Class-conditional biomarker distributions, measured on the training split.
+
+    This is what lets the UI say a recording's theta/alpha ratio is *high* rather
+    than merely reporting the number: it places one recording against the spread
+    of Normal, MCI and Dementia patients the model was trained on. It describes
+    the features, not the checkpoint, so it survives a checkpoint switch.
+
+    Normally served from the file `backend/scripts/build_reference.py` wrote. If
+    that file is missing the sweep runs inline and the first call takes minutes.
+    """
+    try:
+        return await run_in_threadpool(load_reference, refresh)
+    except CatalogUnavailable as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            f"{exc} Run `python backend/scripts/build_reference.py` to precompute "
+            f"{reference_path().name}.",
+        ) from exc

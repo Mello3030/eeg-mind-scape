@@ -1,0 +1,269 @@
+{
+  "split": "train",
+  "class_names": [
+    "Normal",
+    "MCI",
+    "Dementia"
+  ],
+  "n_patients": 950,
+  "n_by_class": {
+    "Normal": 367,
+    "MCI": 334,
+    "Dementia": 249
+  },
+  "skipped": {
+    "no_cached_features": 0,
+    "undecodable": 0
+  },
+  "max_crops": null,
+  "elapsed_seconds": 25.99,
+  "markers": {
+    "mean_theta_alpha_ratio": {
+      "key": "mean_theta_alpha_ratio",
+      "stream": "S1",
+      "label": "Mean theta/alpha ratio",
+      "description": "Slow-band power divided by alpha power, averaged over the 19 channels. The single most replicated EEG correlate of cognitive decline.",
+      "direction": 1,
+      "dementia_minus_normal": 1.0377437140091865,
+      "separation": 0.8535576377271448,
+      "by_class": {
+        "Normal": {
+          "n": 367,
+          "mean": 0.942693038380582,
+          "sd": 0.5903332040843122,
+          "median": 0.8227304597385228,
+          "p25": 0.5630159630427922,
+          "p75": 1.1697792993723661,
+          "min": 0.15934412833303213,
+          "max": 5.524511574914581
+        },
+        "MCI": {
+          "n": 334,
+          "mean": 1.3111022496895548,
+          "sd": 1.068770913238788,
+          "median": 1.0386222135275602,
+          "p25": 0.6758083897936893,
+          "p75": 1.6189207691993368,
+          "min": 0.17204360786433281,
+          "max": 9.473315356593384
+        },
+        "Dementia": {
+          "n": 249,
+          "mean": 1.9804367523897686,
+          "sd": 1.6148620819972117,
+          "median": 1.4698165666900183,
+          "p25": 0.9208306224624577,
+          "p75": 2.3944611821911836,
+          "min": 0.23626285374752784,
+          "max": 10.602571214500227
+        }
+      }
+    },
+    "relative_theta_power": {
+      "key": "relative_theta_power",
+      "stream": "S1",
+      "label": "Relative theta power",
+      "description": "Share of total band power falling in 4-8 Hz, averaged over channels.",
+      "direction": 1,
+      "dementia_minus_normal": 0.07276160090938098,
+      "separation": 0.9548462426109416,
+      "by_class": {
+        "Normal": {
+          "n": 367,
+          "mean": 0.10768675433282997,
+          "sd": 0.053789811440518094,
+          "median": 0.09592502331055612,
+          "p25": 0.07431775010021711,
+          "p75": 0.12461382162428275,
+          "min": 0.025313594196507833,
+          "max": 0.4441574345067863
+        },
+        "MCI": {
+          "n": 334,
+          "mean": 0.14079979621517696,
+          "sd": 0.07329453516329998,
+          "median": 0.12114859686646703,
+          "p25": 0.08872154474393049,
+          "p75": 0.17308673262464305,
+          "min": 0.03309060706574744,
+          "max": 0.41674402134730143
+        },
+        "Dementia": {
+          "n": 249,
+          "mean": 0.18044835524221095,
+          "sd": 0.09338241743557522,
+          "median": 0.1591221013023935,
+          "p25": 0.10961310073554242,
+          "p75": 0.2212494353104473,
+          "min": 0.02929947999259333,
+          "max": 0.5558252893635637
+        }
+      }
+    },
+    "relative_alpha_power": {
+      "key": "relative_alpha_power",
+      "stream": "S1",
+      "label": "Relative alpha power",
+      "description": "Share of total band power falling in 8-13 Hz, averaged over channels.",
+      "direction": -1,
+      "dementia_minus_normal": -0.0686458464870095,
+      "separation": 0.6347681458985677,
+      "by_class": {
+        "Normal": {
+          "n": 367,
+          "mean": 0.23604403572914856,
+          "sd": 0.11751203251096755,
+          "median": 0.21617282083291678,
+          "p25": 0.1450295798978729,
+          "p75": 0.3129096238632619,
+          "min": 0.03378499794603026,
+          "max": 0.6091339975438178
+        },
+        "MCI": {
+          "n": 334,
+          "mean": 0.20131721592061044,
+          "sd": 0.10106799516166014,
+          "median": 0.18355681926115305,
+          "p25": 0.12430279132289473,
+          "p75": 0.26686459182283784,
+          "min": 0.016092172642904443,
+          "max": 0.525459618283319
+        },
+        "Dementia": {
+          "n": 249,
+          "mean": 0.16739818924213906,
+          "sd": 0.097881649982682,
+          "median": 0.14648091508069083,
+          "p25": 0.09296898784251173,
+          "p75": 0.22220743914424493,
+          "min": 0.020233439509704618,
+          "max": 0.48231725723191343
+        }
+      }
+    },
+    "mean_alpha_coherence": {
+      "key": "mean_alpha_coherence",
+      "stream": "S2",
+      "label": "Mean alpha coherence",
+      "description": "Magnitude-squared coherence in the alpha band, averaged over all 171 electrode pairs. Lower values indicate weaker cortical coupling.",
+      "direction": -1,
+      "dementia_minus_normal": -0.035065362244443454,
+      "separation": 0.6998177204141555,
+      "by_class": {
+        "Normal": {
+          "n": 367,
+          "mean": 0.30294321866508256,
+          "sd": 0.056138957768401276,
+          "median": 0.2965056456227879,
+          "p25": 0.26360842071293866,
+          "p75": 0.3359532733495505,
+          "min": 0.1814187657147951,
+          "max": 0.5146651294746856
+        },
+        "MCI": {
+          "n": 334,
+          "mean": 0.28183807994486715,
+          "sd": 0.04700810225678065,
+          "median": 0.27690394912241845,
+          "p25": 0.25100557282478525,
+          "p75": 0.3080120456329416,
+          "min": 0.15802706301291283,
+          "max": 0.46104388314228484
+        },
+        "Dementia": {
+          "n": 249,
+          "mean": 0.2678778564206391,
+          "sd": 0.04324031146541491,
+          "median": 0.2611440980659896,
+          "p25": 0.23805658707574925,
+          "p75": 0.29238214034706966,
+          "min": 0.16928679917663966,
+          "max": 0.44305982551270584
+        }
+      }
+    },
+    "mean_spectral_entropy": {
+      "key": "mean_spectral_entropy",
+      "stream": "S3",
+      "label": "Mean spectral entropy",
+      "description": "Shannon entropy of the normalised power spectrum, averaged over channels. Lower values mean a more rhythmic, less complex signal.",
+      "direction": -1,
+      "dementia_minus_normal": -0.07716281090818011,
+      "separation": 0.15784677725473867,
+      "by_class": {
+        "Normal": {
+          "n": 367,
+          "mean": 3.9360204094765256,
+          "sd": 0.45833683475886056,
+          "median": 3.929375592030977,
+          "p25": 3.7032213905139972,
+          "p75": 4.2459941310317895,
+          "min": 1.7525644725874852,
+          "max": 5.036349335783406
+        },
+        "MCI": {
+          "n": 334,
+          "mean": 3.896049122474301,
+          "sd": 0.5047217932370247,
+          "median": 3.9283823033696725,
+          "p25": 3.6671307973171534,
+          "p75": 4.196289324054593,
+          "min": 1.7533194010979252,
+          "max": 5.060666501522064
+        },
+        "Dementia": {
+          "n": 249,
+          "mean": 3.8588575985683455,
+          "sd": 0.5175603633314263,
+          "median": 3.888317941835052,
+          "p25": 3.5797591091770875,
+          "p75": 4.185632834309025,
+          "min": 1.8955088277396404,
+          "max": 5.375437985909612
+        }
+      }
+    },
+    "mean_absolute_asymmetry": {
+      "key": "mean_absolute_asymmetry",
+      "stream": "S4",
+      "label": "Mean absolute asymmetry",
+      "description": "Magnitude of the normalised left-right power difference over 8 symmetric electrode pairs and 4 bands, regardless of which side leads.",
+      "direction": 1,
+      "dementia_minus_normal": 0.008394261569691114,
+      "separation": 0.17070587343222607,
+      "by_class": {
+        "Normal": {
+          "n": 367,
+          "mean": 0.1418348989403743,
+          "sd": 0.049622059222883444,
+          "median": 0.1333407390902721,
+          "p25": 0.10551244532427972,
+          "p75": 0.16984030301796338,
+          "min": 0.0483495945895811,
+          "max": 0.33517929862819074
+        },
+        "MCI": {
+          "n": 334,
+          "mean": 0.14996394750478892,
+          "sd": 0.053893087300524334,
+          "median": 0.13877998283419402,
+          "p25": 0.11125622253848633,
+          "p75": 0.1800823507245468,
+          "min": 0.059400231318022634,
+          "max": 0.36914320393452726
+        },
+        "Dementia": {
+          "n": 249,
+          "mean": 0.1502291605100654,
+          "sd": 0.04872147695948165,
+          "median": 0.14347299102206534,
+          "p25": 0.11386659551430967,
+          "p75": 0.1798820918936599,
+          "min": 0.05952761024627762,
+          "max": 0.3142157800393761
+        }
+      }
+    }
+  },
+  "note": "Reference distributions measured on the CAUEEG training split. Marker direction is derived from the Dementia-minus-Normal mean difference in this data, not from published thresholds. These are population statistics for interpretation, not diagnostic cut-offs."
+}

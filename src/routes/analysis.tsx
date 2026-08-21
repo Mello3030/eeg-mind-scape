@@ -15,10 +15,17 @@ import {
   YAxis,
 } from "recharts";
 import { AppShell } from "@/components/layout/AppShell";
-import { Disclaimer, EmptyState, Panel } from "@/components/ui-kit";
+import { ClassBadge, Disclaimer, EmptyState, Panel } from "@/components/ui-kit";
 import { tooltipStyle } from "@/components/views/DashboardView";
-import { CLASSES, STREAMS, TOTAL_FEATURES, classColor, pct } from "@/lib/qsfe";
-import { getAnalysis, getWaveform, listAnalyses } from "@/services/api";
+import { CHANNELS_19, CLASSES, STREAMS, TOTAL_FEATURES, classColor, pct } from "@/lib/qsfe";
+import { buildRationale, type MarkerEvidence, type StreamEvidence } from "@/lib/rationale";
+import {
+  type AnalysisDetail,
+  biomarkerReference,
+  getAnalysis,
+  getWaveform,
+  listAnalyses,
+} from "@/services/api";
 
 export const Route = createFileRoute("/analysis")({
   head: () => ({
@@ -76,8 +83,21 @@ function AnalysisPage() {
     staleTime: 5 * 60_000,
   });
 
+  // Class-conditional biomarker distributions from the training split. They
+  // describe the features rather than the checkpoint, so one fetch serves every
+  // analysis and never needs refetching within a session.
+  const { data: reference, isLoading: referenceLoading } = useQuery({
+    queryKey: ["biomarker-reference"],
+    queryFn: biomarkerReference,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+  });
+
   const stream = STREAMS.find((s) => s.id === tab)!;
   const bio = detail?.biomarkers ?? null;
+  const rationale = buildRationale(detail, reference);
+  const streamEvidence = rationale?.streams.find((s) => s.stream === tab) ?? null;
 
   // Gate activation for the selected stream, grouped by the class the model
   // predicted. Computed from the analyses already loaded, so it needs no
@@ -104,29 +124,13 @@ function AnalysisPage() {
       value,
     })) ?? [];
   const maxOffset = Math.max(0, (waveform?.totalDurationSeconds ?? 300) - windowSeconds);
-  const channelOptions = waveform?.channels.length
-    ? waveform.channels
-    : [
-        "Fp1",
-        "F3",
-        "C3",
-        "P3",
-        "O1",
-        "Fp2",
-        "F4",
-        "C4",
-        "P4",
-        "O2",
-        "F7",
-        "T3",
-        "T5",
-        "F8",
-        "T4",
-        "T6",
-        "Fz",
-        "Cz",
-        "Pz",
-      ];
+  // Build the picker from what the recording *has*, never from what this request
+  // fetched: the viewer asks for a single channel at a time, so `channels` holds
+  // exactly one name and using it here would offer a one-entry menu. Falls back
+  // to the CAUEEG montage before the first response lands.
+  const channelOptions = waveform?.availableChannels.length
+    ? waveform.availableChannels
+    : CHANNELS_19;
 
   return (
     <AppShell
@@ -145,7 +149,12 @@ function AnalysisPage() {
           >
             {analyses.map((a) => (
               <option key={a.id} value={a.id}>
-                {(a.sourceRef ?? a.id).slice(0, 28)} · {a.prediction}
+                {(a.sourceRef ?? a.id).slice(0, 28)} · said {a.prediction}
+                {a.groundTruth
+                  ? a.groundTruth.correct
+                    ? " ✓"
+                    : ` ✗ actually ${a.groundTruth.className}`
+                  : ""}
               </option>
             ))}
           </select>
@@ -264,7 +273,10 @@ function AnalysisPage() {
           </div>
         )}
         <div className="mt-3 grid gap-3 sm:grid-cols-4">
-          <Axis label="Channels" value={`${channelOptions.length} (CAUEEG order)`} />
+          <Axis
+            label="Channels"
+            value={`${channelOptions.length} (CAUEEG order) · viewing ${channel}`}
+          />
           <Axis
             label="Time axis"
             value={
@@ -290,6 +302,25 @@ function AnalysisPage() {
           </Disclaimer>
         )}
       </Panel>
+
+      {detail && (
+        <div className="mt-3">
+          <VerdictPanel detail={detail} />
+        </div>
+      )}
+
+      {activeId && (
+        <div className="mt-3">
+          <RationalePanel
+            rationale={rationale}
+            loading={referenceLoading}
+            hasReference={!!reference}
+            hasBiomarkers={!!bio}
+            sourceRef={detail?.sourceRef ?? null}
+            onPickStream={setTab}
+          />
+        </div>
+      )}
 
       <div className="mt-3 flex flex-wrap gap-1">
         {STREAMS.map((s) => (
@@ -330,6 +361,20 @@ function AnalysisPage() {
               </p>
             )}
           </div>
+
+          {/* What the graph above actually says, for the class that was predicted. */}
+          {streamEvidence && rationale && (
+            <div className="mt-3 border-t border-border pt-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="label-xs">Reading for this recording</span>
+                <VerdictBadge verdict={streamEvidence.verdict} predicted={rationale.predicted} />
+              </div>
+              <p className="mt-1.5 text-xs leading-relaxed">{streamEvidence.reason}</p>
+              {streamEvidence.markers.length > 0 && (
+                <MarkerTable markers={streamEvidence.markers} predicted={rationale.predicted} />
+              )}
+            </div>
+          )}
         </Panel>
 
         <Panel
@@ -403,6 +448,327 @@ function AnalysisPage() {
         </Panel>
       </div>
     </AppShell>
+  );
+}
+
+/** What the model said, next to what the recording actually is.
+ *
+ * Only dataset recordings can show this: CAUEEG ships a label for every patient
+ * in its splits, so a scored dataset record has a real answer to compare
+ * against. An uploaded EDF has none, and the panel says so rather than implying
+ * the prediction went unchecked for some fixable reason. */
+function VerdictPanel({ detail }: { detail: AnalysisDetail }) {
+  const truth = detail.groundTruth;
+  const correct = truth?.correct ?? null;
+
+  return (
+    <Panel
+      title="Model prediction vs actual diagnosis"
+      hint={
+        truth
+          ? `CAUEEG ${truth.split} split · ground truth known for this recording`
+          : "No ground truth exists for this recording"
+      }
+      right={
+        truth ? (
+          <span
+            className="num rounded-xs border px-2 py-0.5 text-[11px] font-medium"
+            style={{
+              borderColor: correct ? "var(--normal)" : "var(--dementia)",
+              color: correct ? "var(--normal)" : "var(--dementia)",
+            }}
+          >
+            {correct ? "correct" : "incorrect"}
+          </span>
+        ) : undefined
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xs border border-border px-3 py-2">
+          <div className="label-xs">Model says</div>
+          <div className="mt-1 flex items-center gap-2">
+            <ClassBadge label={detail.prediction} />
+            <span className="num text-[11px] text-muted-foreground">
+              {pct(detail.confidence, 1)} confidence
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-xs border border-border px-3 py-2">
+          <div className="label-xs">Actual (CAUEEG label)</div>
+          <div className="mt-1 flex items-center gap-2">
+            {truth ? (
+              <>
+                <ClassBadge label={truth.className} />
+                {truth.age !== null && (
+                  <span className="num text-[11px] text-muted-foreground">age {truth.age}</span>
+                )}
+              </>
+            ) : (
+              <span className="text-[11px] text-muted-foreground">
+                unknown — uploaded recording
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-xs border border-border px-3 py-2">
+          <div className="label-xs">Outcome</div>
+          <div className="num mt-1 text-[11px]">
+            {truth ? (
+              correct ? (
+                <span style={{ color: "var(--normal)" }}>
+                  match — predicted {detail.prediction}
+                </span>
+              ) : (
+                <span style={{ color: "var(--dementia)" }}>
+                  miss — said {detail.prediction}, actually {truth.className}
+                </span>
+              )
+            ) : (
+              <span className="text-muted-foreground">not scoreable</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {truth && truth.symptom.length > 0 && (
+        <div className="mt-3">
+          <div className="label-xs">CAUEEG symptom tags</div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {truth.symptom.map((tag) => (
+              <span
+                key={tag}
+                className="num rounded-xs border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3">
+        <Disclaimer>
+          {truth
+            ? "The actual label is CAUEEG's own clinical annotation for this recording, shown because the dataset ships it. A single match or miss says nothing about accuracy in general — the model scores about 53% across the three-class test split."
+            : "Uploaded recordings carry no clinical label, so there is nothing to compare the prediction against. Only CAUEEG dataset recordings can be scored for correctness here."}
+        </Disclaimer>
+      </div>
+    </Panel>
+  );
+}
+
+const VERDICT_STYLE = {
+  supports: { text: "supports", color: "var(--normal)" },
+  mixed: { text: "mixed", color: "var(--mci)" },
+  counters: { text: "does not support", color: "var(--dementia)" },
+  // The reference exists; these markers simply carry no usable signal for it.
+  unmeasured: { text: "no usable signal", color: "var(--muted-foreground)" },
+} as const;
+
+function VerdictBadge({
+  verdict,
+  predicted,
+}: {
+  verdict: StreamEvidence["verdict"];
+  predicted: string;
+}) {
+  const style = VERDICT_STYLE[verdict];
+  return (
+    <span
+      className="num rounded-xs border px-1.5 py-0.5 text-[10px] font-medium"
+      style={{ borderColor: style.color, color: style.color }}
+    >
+      {style.text} {verdict === "unmeasured" ? "" : predicted}
+    </span>
+  );
+}
+
+/** The four-reason explanation of a prediction, plus the conclusion that ties
+ * them together. This is the part of the page that answers "why this class?" —
+ * the graphs below show the data, this says what it means. */
+function RationalePanel({
+  rationale,
+  loading,
+  hasReference,
+  hasBiomarkers,
+  sourceRef,
+  onPickStream,
+}: {
+  rationale: ReturnType<typeof buildRationale>;
+  loading: boolean;
+  hasReference: boolean;
+  hasBiomarkers: boolean;
+  sourceRef: string | null;
+  onPickStream: (id: "S1" | "S2" | "S3" | "S4") => void;
+}) {
+  if (!rationale) {
+    return (
+      <Panel title="Why this classification?">
+        <p className="text-xs text-muted-foreground">
+          {loading
+            ? "Loading the training-cohort reference distributions…"
+            : !hasReference
+              ? "The biomarker reference is unavailable, so this recording's markers cannot be placed against the training cohort. Run `python backend/scripts/build_reference.py` to precompute it."
+              : !hasBiomarkers
+                ? "This analysis carries no decoded biomarkers — its feature vectors do not match the current extractor layout, so there is nothing to interpret."
+                : "Select an analysis to see why the model classified it the way it did."}
+        </p>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel
+      emphasis
+      title={`Why this recording was classified ${rationale.predicted}`}
+      hint={`${sourceRef ?? "this analysis"} · each stream read against ${rationale.reference.nPatients} ${rationale.reference.split}-split patients`}
+      right={<ClassBadge label={rationale.predicted} />}
+    >
+      <div className="grid gap-2 lg:grid-cols-2">
+        {rationale.streams.map((evidence) => (
+          <button
+            key={evidence.stream}
+            onClick={() => onPickStream(evidence.stream)}
+            className="rounded-xs border border-border px-3 py-2 text-left transition-colors hover:border-border-strong hover:bg-secondary/40"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium">
+                {evidence.stream} · {evidence.name}
+              </span>
+              <VerdictBadge verdict={evidence.verdict} predicted={rationale.predicted} />
+            </div>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {evidence.reason}
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="label-xs">gate</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-sm bg-secondary">
+                <div
+                  className="h-full rounded-sm"
+                  style={{
+                    width: `${Math.min(100, evidence.gate * 100)}%`,
+                    backgroundColor: classColor(rationale.predicted),
+                  }}
+                />
+              </div>
+              <span className="num text-[10px] text-muted-foreground">
+                {evidence.gate.toFixed(3)} · {pct(evidence.gateShare, 0)} of total
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 rounded-xs border border-border-strong bg-secondary/50 px-3 py-2.5">
+        <div className="label-xs">Conclusion</div>
+        <p className="mt-1 text-xs leading-relaxed">{rationale.conclusion}</p>
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
+          <Axis
+            label="Marker agreement"
+            value={`${rationale.agreeing} of ${rationale.measured} nearest ${rationale.predicted}`}
+          />
+          <Axis label="Gate-weighted support" value={pct(rationale.weightedSupport, 0)} />
+          <Axis
+            label="Margin over runner-up"
+            value={`${pct(rationale.margin, 1)} vs ${rationale.runnerUp}`}
+          />
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <Disclaimer>{rationale.caveat}</Disclaimer>
+      </div>
+    </Panel>
+  );
+}
+
+/** Where each marker sits against the three reference groups. */
+function MarkerTable({ markers, predicted }: { markers: MarkerEvidence[]; predicted: string }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="mt-2 w-full text-left text-[11px]">
+        <thead className="label-xs border-b-[1.5px] border-border-strong">
+          <tr>
+            <th className="py-1.5 pr-2 font-medium">Marker</th>
+            <th className="py-1.5 pr-2 font-medium">This EEG</th>
+            {CLASSES.map((cls) => (
+              <th key={cls} className="py-1.5 pr-2 font-medium">
+                {cls}
+              </th>
+            ))}
+            <th className="py-1.5 pr-2 font-medium">z vs Normal</th>
+            <th className="py-1.5 pr-2 font-medium">Separates</th>
+            <th className="py-1.5 font-medium">Nearest</th>
+          </tr>
+        </thead>
+        <tbody>
+          {markers.map((marker) => (
+            <tr
+              key={marker.key}
+              className={`border-b border-border/70 last:border-0 ${
+                marker.counts ? "" : "opacity-55"
+              }`}
+            >
+              <td className="py-1.5 pr-2" title={marker.description}>
+                {marker.label}
+              </td>
+              <td className="num py-1.5 pr-2 font-medium">{marker.value.toFixed(3)}</td>
+              {CLASSES.map((cls) => (
+                <td key={cls} className="num py-1.5 pr-2 text-muted-foreground">
+                  {Number.isFinite(marker.classMean[cls]) ? marker.classMean[cls].toFixed(3) : "—"}
+                </td>
+              ))}
+              <td className="num py-1.5 pr-2">
+                {marker.z >= 0 ? "+" : ""}
+                {marker.z.toFixed(2)}
+              </td>
+              <td
+                className="num py-1.5 pr-2 text-muted-foreground"
+                title={`|Cohen's d| between the Normal and Dementia reference groups`}
+              >
+                {marker.separationLabel} · {marker.separation.toFixed(2)}
+              </td>
+              <td className="py-1.5">
+                {marker.outOfRange ? (
+                  <span
+                    className="num text-muted-foreground"
+                    title="Further than 3 SD from every class mean"
+                  >
+                    off-range
+                  </span>
+                ) : !marker.counts ? (
+                  <span
+                    className="num text-muted-foreground"
+                    title="Separation too weak to carry information"
+                  >
+                    no signal
+                  </span>
+                ) : (
+                  <span
+                    className="num"
+                    style={{
+                      color: classColor(marker.nearest),
+                      fontWeight: marker.nearest === predicted ? 600 : 400,
+                    }}
+                  >
+                    {marker.nearest}
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
+        Class columns are training-split means. “z vs Normal” is the distance from the Normal mean
+        in Normal-group SDs; “nearest” is the class whose mean this value sits closest to, measured
+        in that class's own SDs. “Separates” is |Cohen's d| between the Normal and Dementia groups —
+        a marker with negligible separation is greyed out and given no vote, as is one sitting more
+        than 3 SD from every class mean.
+      </p>
+    </div>
   );
 }
 

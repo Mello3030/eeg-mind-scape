@@ -46,6 +46,9 @@ class RegisterRequest(BaseModel):
             raise ValueError("Password needs more variety than that.")
         return value
     role: str = Field(default="researcher")
+    # Checked against QSFE_REGISTRATION_CODE by the route, not here: a validator
+    # cannot read settings, and a wrong code must answer 403 rather than 422.
+    registration_code: str = ""
 
 
 class LoginRequest(BaseModel):
@@ -132,6 +135,14 @@ class PredictionSummary(BaseModel):
     n_crops: int
     checkpoint: str | None
     created_at: datetime
+    # Lives on the summary, not just the detail: PATCH /api/analyses/{id} answers
+    # with a summary, so without this the one endpoint that edits notes could not
+    # echo them back — and history rows carry notes the list UI already reads.
+    notes: str | None = None
+    # Likewise on the summary: every list view (history, dashboard, patient
+    # timeline) shows a match/miss badge per row, and it was silently blank for
+    # dataset recordings because the field only existed on the detail schema.
+    ground_truth: dict[str, Any] | None = None
 
 
 class PredictionDetail(PredictionSummary):
@@ -139,8 +150,6 @@ class PredictionDetail(PredictionSummary):
     per_crop: list[dict[str, Any]] | None = None
     recording: dict[str, Any] | None = None
     timing_ms: dict[str, Any] | None = None
-    ground_truth: dict[str, Any] | None = None
-    notes: str | None = None
     device: str | None = None
     patient: PatientOut | None = None
     upload: UploadOut | None = None

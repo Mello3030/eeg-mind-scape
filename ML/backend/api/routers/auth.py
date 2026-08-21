@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import re
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
+from ...app.config import get_settings
 from .. import auth
 from ..db import get_db
 from ..ratelimit import client_key, enforce, login_limiter, register_limiter
@@ -25,11 +27,34 @@ def _normalise_email(email: str) -> str:
     return email
 
 
+def _check_registration_code(supplied: str) -> None:
+    """Reject a signup that does not carry the shared invite code.
+
+    Enforced here rather than in the browser: the form field is a convenience,
+    but anything that only guards the UI is bypassed by posting to this endpoint
+    directly. An empty configured code disables the gate entirely.
+
+    `compare_digest` keeps the comparison constant-time. That is close to
+    theatre for a code someone types by hand, but it costs nothing and stops the
+    check from being the one obvious timing oracle in the auth layer. The real
+    brake on guessing is `register_limiter`, which the caller applies first.
+    """
+    expected = get_settings().registration_code
+    if not expected:
+        return
+    if not secrets.compare_digest(supplied.strip(), expected):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "That registration code is not valid. Ask the project owner for the current code.",
+        )
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(
     payload: RegisterRequest, request: Request, db: Session = Depends(get_db)
 ) -> TokenResponse:
     enforce(register_limiter, request)
+    _check_registration_code(payload.registration_code)
     email = _normalise_email(payload.email)
     if payload.role not in auth.ROLES:
         raise HTTPException(

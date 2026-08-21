@@ -169,7 +169,10 @@ def get_analysis(
 
 @router.patch("/{prediction_id}", response_model=PredictionSummary)
 def update_notes(
-    prediction_id: str, payload: PredictionNotes, db: Session = Depends(get_db)
+    prediction_id: str,
+    payload: PredictionNotes,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ) -> PredictionSummary:
     prediction = _get_or_404(db, prediction_id, user)
     prediction.notes = payload.notes

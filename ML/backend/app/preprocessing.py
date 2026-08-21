@@ -151,6 +151,10 @@ def read_edf_window(
 
     return {
         "channels": wanted,
+        # Every channel this recording *has*, not just the ones this call
+        # returned. A viewer asking for one channel still needs the full list to
+        # populate its picker, otherwise it can only ever offer the one it holds.
+        "available_channels": names,
         "source_labels": labels,
         "sample_rate": fs,
         "effective_sample_rate": fs / step,

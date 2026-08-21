@@ -67,9 +67,30 @@ def main() -> int:
                     "email": "smoke@qsfe.lab",
                     "password": "Sm0keTestPass",
                     "role": "researcher",
+                    # Read from settings rather than hardcoded, so changing
+                    # QSFE_REGISTRATION_CODE does not break this test.
+                    "registration_code": get_settings().registration_code,
                 },
             )
             check("POST /api/auth/register", reg.status_code == 201, f"status={reg.status_code}")
+
+            # The invite gate must hold against a direct POST, not just the form.
+            if get_settings().registration_code:
+                blocked = client.post(
+                    "/api/auth/register",
+                    json={
+                        "name": "Uninvited",
+                        "email": "uninvited@qsfe.lab",
+                        "password": "Un1nvitedPass",
+                        "role": "researcher",
+                        "registration_code": "definitely-wrong",
+                    },
+                )
+                check(
+                    "POST /api/auth/register (wrong code -> 403)",
+                    blocked.status_code == 403,
+                    f"status={blocked.status_code}",
+                )
             client.headers["Authorization"] = f"Bearer {reg.json()['token']}"
             check("GET /api/auth/me", client.get("/api/auth/me").status_code == 200)
 
@@ -106,7 +127,8 @@ def run(client: TestClient, args) -> None:
     other = client.post(
         "/api/auth/register",
         json={"name": "Other", "email": "other@qsfe.lab", "password": "0therTestPass",
-              "role": "researcher"},
+              "role": "researcher",
+              "registration_code": get_settings().registration_code},
     ).json()["token"]
     other_headers = {"Authorization": f"Bearer {other}"}
 

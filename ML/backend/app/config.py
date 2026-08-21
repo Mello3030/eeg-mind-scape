@@ -78,6 +78,13 @@ class Settings(BaseSettings):
     jwt_secret: str = DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 12
+    # Shared invite code that /api/auth/register requires, so a publicly
+    # reachable instance does not accept accounts from anyone who finds it.
+    # Set QSFE_REGISTRATION_CODE to change it; set it to an empty string to open
+    # registration to everyone. This is a weak gate by construction — one secret
+    # shared by every researcher, no per-invite tracking or revocation — so treat
+    # it as a speed bump against drive-by signups, not as access control.
+    registration_code: str = "passcode"
     # Postgres schema to confine every table to. Empty -> the connection's
     # default search_path (and, for SQLite, ignored entirely).
     db_schema: str = ""

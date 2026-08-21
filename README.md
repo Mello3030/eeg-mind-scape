@@ -29,12 +29,12 @@ placeholder, and the UI says so.
 
 | Route | Purpose |
 | --- | --- |
-| `/login`, `/register` | JWT auth (researcher / administrator roles) |
+| `/login`, `/register` | JWT auth (researcher / administrator roles); signup needs the invite code |
 | `/dashboard` (and `/`) | KPIs, distribution, measured gate weights, recent analyses |
 | `/patients`, `/patients/:id` | Cohort registry, source recordings, probability & gate history |
 | `/upload` | Drag-and-drop EDF upload; scoring is synchronous |
 | `/predictions`, `/predictions/:id` | History and the full interpretability report |
-| `/analysis` | EEG viewer reading the real EDF + per-stream decoded biomarkers |
+| `/analysis` | EEG viewer (all 19 channels) + predicted-vs-actual + per-stream decoded biomarkers |
 | `/model` | Architecture diagram + measured gate analysis |
 | `/performance` | Confusion matrix, per-class metrics, ablation, baselines |
 | `/about`, `/settings` | Background, limitations, checkpoint switching, environment |
@@ -89,6 +89,14 @@ a public development secret and logs a warning at startup.
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
+Registration is gated by a shared invite code so a reachable instance does not
+collect accounts from strangers. It defaults to `passcode`; change it with
+`QSFE_REGISTRATION_CODE` in `ML/backend/.env`, or set it empty to open signups.
+The check runs in `POST /api/auth/register` — the form field is a convenience,
+and posting to the endpoint directly without the code returns 403. It is one
+secret shared by everyone, with no per-invite tracking or revocation, so it
+slows drive-by signups rather than controlling access.
+
 ## Where the numbers come from
 
 Nothing in the UI is transcribed. Every figure is either measured on demand or
@@ -101,6 +109,7 @@ parsed from the file the training run wrote:
 | Ablation table and finding (validation accuracy) | `/model/ablation` — parses `outputs/ablation/ablation_results.txt` |
 | Gate activations per class | Averaged over the analyses in the workspace |
 | Biomarkers | Decoded from the feature vectors of each prediction |
+| Reference distributions behind the `/analysis` explanation | `/model/reference` — every training-split patient decoded through the same biomarker decoder |
 | Waveforms | Read from the source EDF, decimated for display |
 
 Measured performance is cached per checkpoint and recomputed when you switch
@@ -125,6 +134,51 @@ maps `n → 64 → 32`; the four 32-d embeddings concatenate to 128, are scaled 
 four sigmoid gates, then classified `128 → 64 → 3`.
 
 Gate weights describe **stream contribution**, not causal medical explanations.
+
+### Why a recording was classified the way it was
+
+`/analysis` explains each prediction stream by stream. A gate weight alone cannot
+do that — it says how hard the model leaned on a stream, not what the stream saw —
+so each decoded biomarker is placed against the distribution of Normal, MCI and
+Dementia patients in the **training split** (950 patients, `/model/reference`).
+
+Precompute it once; the sweep takes a few minutes and the result is checkpoint-independent:
+
+```bash
+python backend/scripts/build_reference.py     # writes outputs/reference/biomarker_reference.json
+```
+
+Measured on the training split, with |Cohen's d| between the Normal and Dementia groups:
+
+| Marker | Stream | Normal | MCI | Dementia | Separation |
+| --- | --- | --- | --- | --- | --- |
+| Relative theta power | S1 | 0.108 | 0.141 | 0.180 | 0.96 |
+| Mean theta/alpha ratio | S1 | 0.943 | 1.311 | 1.980 | 0.85 |
+| Mean alpha coherence | S2 | 0.303 | 0.282 | 0.268 | 0.70 |
+| Relative alpha power | S1 | 0.236 | 0.201 | 0.167 | 0.64 |
+| Mean absolute asymmetry | S4 | 0.142 | 0.150 | 0.150 | 0.17 |
+| Mean spectral entropy | S3 | 3.936 | 3.896 | 3.859 | 0.16 |
+
+**This is the ablation result seen from the feature side.** The S1 and S2 markers
+separate the end classes (d = 0.64–0.96); the S3 and S4 markers barely move
+(d ≈ 0.16), which is why S1 + S2 beats the full four-stream model on validation
+and why those two streams draw low gate activations. Marker *direction* is
+measured here too — the sign of the Dementia-minus-Normal difference — rather than
+transcribed from the literature, and it reproduces the expected picture: slowing
+up, alpha power down, coherence down, entropy down.
+
+Three rules keep the explanation honest:
+
+- A marker further than 3 SD from **every** class mean is reported as off-range
+  and given no vote — "nearest class" is meaningless out there.
+- A marker with negligible separation (d < 0.2) is displayed but excluded from the
+  agreement tally.
+- MCI's reference mean lies *between* the other two classes on every marker, so a
+  merely middling value lands nearest MCI by default. The UI says so whenever the
+  predicted class is the intermediate one.
+
+The readout summarises the same features the network consumed, so agreement is not
+an independent second opinion — only disagreement is genuinely informative.
 
 ### Ablation (from `ablation_results.txt`)
 
@@ -171,7 +225,7 @@ GET  /api/history           /api/history/stats   /api/history/compare?ids=...
 GET  /api/history/patients/{id}/timeline
 GET  /api/reports/{id}?format=json|html|pdf
 
-GET  /health   /model/info   /model/performance   /model/ablation
+GET  /health   /model/info   /model/performance   /model/ablation   /model/reference
 GET  /model/checkpoints      POST /model/reload
 GET  /dataset  /dataset/records  /dataset/schema
 POST /predict  /predict/features  /predict/record/{serial}    (stateless)
@@ -222,5 +276,11 @@ not implemented.
 - Predictions are grouped by the class the model predicted, never by a verified
   clinical label — except for dataset recordings, where the CAUEEG ground truth
   is shown alongside and marked as such.
+- **Ground truth exists only for CAUEEG dataset recordings.** `dementia.json`
+  ships `class_name`, `class_label`, `age` and `symptom` for the 1187 patients in
+  its train/validation/test splits, and that is what every match/miss badge reads.
+  `annotation.json` covers all 1379 recordings but carries *no* class label, so it
+  cannot be used as a truth source; uploaded EDFs have no label at all and are
+  reported as "not scoreable" rather than silently counted as wrong.
 - Uploads whose sample rate differs from 200 Hz are resampled; the response
   reports `recording.resampled_from`.

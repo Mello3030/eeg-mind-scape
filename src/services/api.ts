@@ -115,10 +115,14 @@ export async function apiRegister(input: {
   email: string;
   password: string;
   role: Role;
+  /** Shared invite code the server requires (QSFE_REGISTRATION_CODE). The
+   *  server is the one that checks it — this only carries it. */
+  registrationCode: string;
 }) {
+  const { registrationCode, ...rest } = input;
   const result = await request<{ token: string; user: SessionUser }>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...rest, registration_code: registrationCode }),
   });
   setToken(result.token);
   return result.user;
@@ -244,6 +248,10 @@ export interface GroundTruth {
   split: string;
   correct: boolean;
   age: number | null;
+  /** CAUEEG's own symptom tags for this recording (e.g. ["mci",
+   *  "mci_amnestic"]), carried through from dementia.json. Context for the
+   *  label — not a second label. */
+  symptom: string[];
 }
 
 export interface Analysis {
@@ -337,6 +345,7 @@ interface RawAnalysis {
     split?: string;
     correct?: boolean;
     age?: number | null;
+    symptom?: string[] | null;
   } | null;
   biomarkers?: Biomarkers | null;
   per_crop?: Array<Record<string, unknown>> | null;
@@ -382,6 +391,7 @@ function toAnalysis(a: RawAnalysis): Analysis {
           split: truth.split ?? "",
           correct: Boolean(truth.correct),
           age: truth.age ?? null,
+          symptom: truth.symptom ?? [],
         }
       : null,
   };
@@ -478,6 +488,9 @@ export interface Waveform {
   totalDurationSeconds: number;
   data: number[][];
   scoredWindows: Array<{ start_seconds: number; duration_seconds: number }>;
+  /** Every channel the recording holds — `channels` is only the subset this
+   *  request asked for, so a picker must be built from this instead. */
+  availableChannels: string[];
 }
 
 /** Decimated EEG straight from the source EDF. Returns null when the analysis
@@ -489,6 +502,7 @@ export async function getWaveform(
   try {
     const raw = await request<{
       channels: string[];
+      available_channels?: string[];
       sample_rate: number;
       effective_sample_rate: number;
       start_seconds: number;
@@ -513,6 +527,7 @@ export async function getWaveform(
       totalDurationSeconds: raw.total_duration_seconds,
       data: raw.data,
       scoredWindows: raw.scored_windows ?? [],
+      availableChannels: raw.available_channels ?? raw.channels,
     };
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 410)) return null;
@@ -706,6 +721,50 @@ export interface Ablation {
 }
 
 export const modelAblation = () => request<Ablation>("/model/ablation");
+
+/** Per-class spread of one biomarker across the reference split. */
+export interface MarkerStats {
+  n: number;
+  mean: number;
+  sd: number;
+  median: number;
+  p25: number;
+  p75: number;
+  min: number;
+  max: number;
+}
+
+export interface ReferenceMarker {
+  key: string;
+  stream: StreamKey;
+  label: string;
+  description: string;
+  /** +1 where the marker is higher in Dementia than in Normal on this split,
+   *  -1 where it is lower. Measured, not taken from the literature. */
+  direction: number;
+  dementia_minus_normal: number;
+  /** |Cohen's d| between the Normal and Dementia reference groups — how much
+   *  this marker can discriminate at all. Around 0.16 for the S3 and S4 markers
+   *  against 0.85-0.96 for S1, which is the ablation result seen from the
+   *  feature side rather than the accuracy side. */
+  separation: number;
+  by_class: Record<ClassLabel, MarkerStats>;
+}
+
+/** Class-conditional biomarker distributions measured on the training split —
+ *  the baseline that lets a single recording's markers be called high or low.
+ *  Independent of the checkpoint, so it is cached hard on the client. */
+export interface BiomarkerReference {
+  split: string;
+  class_names: ClassLabel[];
+  n_patients: number;
+  n_by_class: Record<ClassLabel, number>;
+  markers: Record<string, ReferenceMarker>;
+  note: string;
+  source?: string;
+}
+
+export const biomarkerReference = () => request<BiomarkerReference>("/model/reference");
 
 export interface Checkpoint {
   name: string;

@@ -25,6 +25,7 @@ function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("researcher");
+  const [registrationCode, setRegistrationCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -48,9 +49,13 @@ function RegisterPage() {
             setError("Password must be at least 8 characters.");
             return;
           }
+          if (!registrationCode.trim()) {
+            setError("Enter the registration code.");
+            return;
+          }
           setBusy(true);
           try {
-            await register({ name, email, password, role });
+            await register({ name, email, password, role, registrationCode });
             navigate({ to: "/dashboard" });
           } catch (err) {
             setError(err instanceof Error ? err.message : "Registration failed.");
@@ -74,6 +79,15 @@ function RegisterPage() {
             <option value="administrator">administrator</option>
           </select>
         </label>
+        <Field
+          label="Registration code"
+          value={registrationCode}
+          onChange={setRegistrationCode}
+          type="password"
+        />
+        <p className="-mt-1 text-[11px] text-muted-foreground">
+          This instance is invite-only. Ask the project owner for the code.
+        </p>
         {error && <p className="text-[11px] text-destructive">{error}</p>}
         <button
           type="submit"

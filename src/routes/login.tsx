@@ -156,8 +156,8 @@ export function AuthLayout({
           <div className="mt-7 border-t-[1.5px] border-border-strong pt-7">{children}</div>
 
           <p className="mt-8 border-t border-border pt-4 text-[11px] leading-relaxed text-muted-foreground">
-            Research prototype — not for clinical diagnosis. Demo credentials are validated
-            client-side only.
+            Research prototype — not for clinical diagnosis. Credentials are verified by the API:
+            passwords are hashed with Argon2id and sessions are signed tokens.
           </p>
         </div>
       </main>
