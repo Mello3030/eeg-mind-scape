@@ -252,6 +252,13 @@ export interface GroundTruth {
    *  "mci_amnestic"]), carried through from dementia.json. Context for the
    *  label — not a second label. */
   symptom: string[];
+  /** How the label was established. Dataset recordings are scored by serial and
+   *  carry no marker. An upload matched to a CAUEEG serial carries "filename"
+   *  (the name looked like a serial) or "content_sha256" (the bytes matched the
+   *  dataset EDF, which settles it). */
+  inferredFrom: "filename" | "content_sha256" | null;
+  /** CAUEEG serial this label came from; set only for matched uploads. */
+  serial: string | null;
 }
 
 export interface Analysis {
@@ -346,6 +353,8 @@ interface RawAnalysis {
     correct?: boolean;
     age?: number | null;
     symptom?: string[] | null;
+    inferred_from?: string | null;
+    serial?: string | null;
   } | null;
   biomarkers?: Biomarkers | null;
   per_crop?: Array<Record<string, unknown>> | null;
@@ -392,6 +401,11 @@ function toAnalysis(a: RawAnalysis): Analysis {
           correct: Boolean(truth.correct),
           age: truth.age ?? null,
           symptom: truth.symptom ?? [],
+          inferredFrom:
+            truth.inferred_from === "filename" || truth.inferred_from === "content_sha256"
+              ? truth.inferred_from
+              : null,
+          serial: truth.serial ?? null,
         }
       : null,
   };

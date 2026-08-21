@@ -466,7 +466,9 @@ function VerdictPanel({ detail }: { detail: AnalysisDetail }) {
       title="Model prediction vs actual diagnosis"
       hint={
         truth
-          ? `CAUEEG ${truth.split} split · ground truth known for this recording`
+          ? truth.inferredFrom === "filename"
+            ? `CAUEEG ${truth.split} split · label inferred from the filename, not verified`
+            : `CAUEEG ${truth.split} split · ground truth known for this recording`
           : "No ground truth exists for this recording"
       }
       right={
@@ -495,7 +497,10 @@ function VerdictPanel({ detail }: { detail: AnalysisDetail }) {
         </div>
 
         <div className="rounded-xs border border-border px-3 py-2">
-          <div className="label-xs">Actual (CAUEEG label)</div>
+          <div className="label-xs">
+            Actual (CAUEEG label)
+            {truth?.inferredFrom === "filename" && " · inferred"}
+          </div>
           <div className="mt-1 flex items-center gap-2">
             {truth ? (
               <>
@@ -550,9 +555,13 @@ function VerdictPanel({ detail }: { detail: AnalysisDetail }) {
 
       <div className="mt-3">
         <Disclaimer>
-          {truth
-            ? "The actual label is CAUEEG's own clinical annotation for this recording, shown because the dataset ships it. A single match or miss says nothing about accuracy in general — the model scores about 53% across the three-class test split."
-            : "Uploaded recordings carry no clinical label, so there is nothing to compare the prediction against. Only CAUEEG dataset recordings can be scored for correctness here."}
+          {!truth
+            ? "This recording carries no clinical label, so there is nothing to compare the prediction against. Uploads are matched to CAUEEG only when the filename is a dataset serial."
+            : truth.inferredFrom === "filename"
+              ? `This was uploaded as a file named after CAUEEG serial ${truth.serial ?? ""}, so the label above is that record's annotation — inferred from the name, not verified against the recording itself. A renamed file would produce a wrong label here. The dataset EDF is not present on this server, so the contents could not be checked.`
+              : truth.inferredFrom === "content_sha256"
+                ? "This upload's contents hash to the same bytes as the dataset EDF for that serial, so the label is confirmed rather than guessed. A single match or miss still says nothing about accuracy in general — the model scores about 53% across the three-class test split."
+                : "The actual label is CAUEEG's own clinical annotation for this recording, shown because the dataset ships it. A single match or miss says nothing about accuracy in general — the model scores about 53% across the three-class test split."}
         </Disclaimer>
       </div>
     </Panel>

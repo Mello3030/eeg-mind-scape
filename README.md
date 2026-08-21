@@ -215,6 +215,8 @@ POST /api/auth/register     POST /api/auth/login      GET  /api/auth/me
 GET/POST /api/patients      GET/PATCH/DELETE /api/patients/{id}
 
 POST /api/analyses                        (multipart: file, patient_id, notes, n_crops)
+                                          patient_id is required — a stored analysis
+                                          must belong to one; use /predict otherwise
 POST /api/analyses/from-record/{serial}   score a CAUEEG patient with known ground truth
 POST /api/analyses/{id}/reanalyse
 GET  /api/analyses/{id}                   full result incl. biomarkers
@@ -276,6 +278,14 @@ not implemented.
 - Predictions are grouped by the class the model predicted, never by a verified
   clinical label — except for dataset recordings, where the CAUEEG ground truth
   is shown alongside and marked as such.
+- **Uploads named after a CAUEEG serial are matched to their label.** An upload
+  called `00014.edf` is looked up as serial `00014`; the label is attached with
+  `inferred_from: "filename"`, and the UI presents it as inferred rather than
+  verified, because a filename proves nothing. Where the dataset EDF is on disk
+  the file is hashed against it: a match upgrades this to `content_sha256`, and
+  a mismatch attaches no label at all, so a renamed file cannot borrow another
+  patient's diagnosis. Serials outside the three-class benchmark
+  (`parkinson_synd`, `tga`, `ftd`, `nph`) are never labelled.
 - **Ground truth exists only for CAUEEG dataset recordings.** `dementia.json`
   ships `class_name`, `class_label`, `age` and `symptom` for the 1187 patients in
   its train/validation/test splits, and that is what every match/miss badge reads.

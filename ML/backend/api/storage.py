@@ -117,6 +117,22 @@ def _destination(sha: str, suffix: str) -> Path:
     return get_settings().upload_dir / f"{now:%Y}" / f"{now:%m}" / f"{sha[:16]}{suffix}"
 
 
+def sha256_of(path: Path) -> str | None:
+    """Hash a file already on disk, in the same chunks `save_upload` uses.
+
+    Returns ``None`` if it cannot be read, so a caller comparing hashes treats
+    an unreadable file as "cannot confirm" rather than as a mismatch.
+    """
+    digest = hashlib.sha256()
+    try:
+        with Path(path).open("rb") as handle:
+            while chunk := handle.read(CHUNK):
+                digest.update(chunk)
+    except OSError:
+        return None
+    return digest.hexdigest()
+
+
 def resolve(stored_path: str) -> Path:
     """Turn a stored (possibly relative) path back into an absolute path."""
     path = Path(stored_path)

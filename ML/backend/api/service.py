@@ -7,6 +7,8 @@ transaction so nothing is stored without a result and vice versa.
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -23,6 +25,63 @@ from ..app.version import __version__
 from . import crud, storage
 from .models import Prediction
 from .storage import StoredFile
+
+
+_SERIAL_RE = re.compile(r"^(\d{1,5})$")
+
+
+def _ground_truth_from_filename(filename: str, predicted_label: str, sha256: str) -> dict | None:
+    """Recover a CAUEEG label for an upload whose filename is a dataset serial.
+
+    CAUEEG EDFs are de-identified — patient name is literally ``X``, every other
+    header field is blank and the start date is a placeholder — so the file's
+    contents identify nothing. The filename is the only handle an upload gives
+    us, and a filename is weak evidence: anyone can rename a file. The label is
+    therefore marked ``inferred_from: filename`` so the interface can present it
+    as a guess rather than as verified truth.
+
+    When the dataset EDF is present we hash it and compare. A match upgrades the
+    record to ``content_sha256`` and settles the question; a mismatch means the
+    upload is a different recording wearing that name, and no label is returned
+    at all. Deployments without the bulk signal data simply stay at the weaker
+    level rather than losing the feature.
+    """
+    stem = Path(filename).stem.strip()
+    match = _SERIAL_RE.match(stem)
+    if not match:
+        return None
+
+    try:
+        catalog = get_catalog()
+        record = catalog.get(match.group(1).zfill(5))
+    except (CatalogUnavailable, KeyError):
+        return None
+    if not record.get("class_name"):
+        return None
+
+    basis = "filename"
+    edf = catalog.edf_path(record["serial"])
+    if edf.exists():
+        digest = storage.sha256_of(edf)
+        if digest == sha256:
+            basis = "content_sha256"
+        elif digest is not None:
+            # Same name, different recording. Guessing here would attach one
+            # patient's diagnosis to another's EEG.
+            return None
+        # digest is None: unreadable, so neither confirmed nor refuted. Stay at
+        # the filename level rather than discarding a probably-correct label.
+
+    return {
+        "class_label": record["class_label"],
+        "class_name": record["class_name"],
+        "split": record["split"],
+        "age": record["age"],
+        "symptom": record["symptom"],
+        "correct": record["class_name"] == predicted_label,
+        "serial": record["serial"],
+        "inferred_from": basis,
+    }
 
 
 def analyse_upload(
@@ -58,6 +117,13 @@ def analyse_upload(
         storage.delete(upload.stored_path)
 
     result["source"] = {"kind": "upload", "filename": filename}
+
+    truth = _ground_truth_from_filename(
+        filename, result["prediction"]["label"], stored.sha256
+    )
+    if truth is not None:
+        result["ground_truth"] = truth
+
     return crud.create_prediction(
         db,
         result,
