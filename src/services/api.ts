@@ -244,7 +244,9 @@ export const deletePatient = (id: string) =>
 /* ---------------------------------- analyses ---------------------------------- */
 
 export interface GroundTruth {
-  className: ClassLabel;
+  /** null when CAUEEG knows the recording but leaves it out of the three-class
+   *  task (parkinsonian syndrome, TGA, FTD, NPH — 192 of the 1379). */
+  className: ClassLabel | null;
   split: string;
   correct: boolean;
   age: number | null;
@@ -259,6 +261,10 @@ export interface GroundTruth {
   inferredFrom: "filename" | "content_sha256" | null;
   /** CAUEEG serial this label came from; set only for matched uploads. */
   serial: string | null;
+  /** The recording is catalogued but has no Normal/MCI/Dementia label. */
+  excludedFromTask: boolean;
+  /** abnormal.json's binary verdict, which does cover all 1379 recordings. */
+  abnormalLabel: string | null;
 }
 
 export interface Analysis {
@@ -355,6 +361,8 @@ interface RawAnalysis {
     symptom?: string[] | null;
     inferred_from?: string | null;
     serial?: string | null;
+    excluded_from_task?: boolean | null;
+    abnormal_label?: string | null;
   } | null;
   biomarkers?: Biomarkers | null;
   per_crop?: Array<Record<string, unknown>> | null;
@@ -394,9 +402,12 @@ function toAnalysis(a: RawAnalysis): Analysis {
     checkpoint: a.checkpoint,
     createdAt: a.created_at,
     notes: a.notes ?? null,
-    groundTruth: truth?.class_name
-      ? {
-          className: truth.class_name as ClassLabel,
+    // Kept when there is a class OR when the recording is catalogued but
+    // unlabelled — the second case still has something true to report.
+    groundTruth:
+      truth && (truth.class_name || truth.excluded_from_task)
+        ? {
+          className: (truth.class_name as ClassLabel | undefined) ?? null,
           split: truth.split ?? "",
           correct: Boolean(truth.correct),
           age: truth.age ?? null,
@@ -406,6 +417,8 @@ function toAnalysis(a: RawAnalysis): Analysis {
               ? truth.inferred_from
               : null,
           serial: truth.serial ?? null,
+          excludedFromTask: Boolean(truth.excluded_from_task),
+          abnormalLabel: truth.abnormal_label ?? null,
         }
       : null,
   };

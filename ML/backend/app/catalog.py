@@ -31,6 +31,8 @@ class Catalog:
         self._records: list[dict] | None = None
         self._by_serial: dict[str, dict] = {}
         self._task: dict = {}
+        # Every annotated recording, including the 192 the dementia task omits.
+        self._annotated: dict[str, dict] | None = None
 
     def _ensure(self) -> None:
         if self._records is not None:
@@ -64,6 +66,61 @@ class Catalog:
                 "task_description": data.get("task_description"),
                 "class_label_to_name": data.get("class_label_to_name", CLASS_NAMES),
             }
+
+    def excluded_record(self, serial: str) -> dict | None:
+        """A recording CAUEEG knows about but leaves out of the dementia task.
+
+        ``dementia.json`` covers 1187 of the 1379 annotated recordings. The other
+        192 are real patients with real diagnoses — parkinsonian syndrome,
+        transient global amnesia, frontotemporal dementia, normal pressure
+        hydrocephalus — that the three-class benchmark does not model. Recognising
+        them lets the interface say "no three-class label" instead of the untrue
+        "unknown recording", without ever inventing a Normal/MCI/Dementia answer
+        the dataset authors deliberately withheld. ``abnormal.json`` does label
+        all 1379, so the binary verdict is carried along as context.
+
+        Returns ``None`` for a serial that is in the dementia task (use ``get``)
+        or absent from the dataset entirely.
+        """
+        self._ensure_annotations()
+        serial = serial.strip()
+        serial = serial if serial in self._annotated else serial.zfill(5)
+        if serial in self._by_serial or serial not in self._annotated:
+            return None
+        return dict(self._annotated[serial])
+
+    def _ensure_annotations(self) -> None:
+        if self._annotated is not None:
+            return
+        with self._lock:
+            if self._annotated is not None:
+                return
+            self._ensure()
+            annotated: dict[str, dict] = {}
+            base = get_settings().dataset_dir
+
+            binary: dict[str, str] = {}
+            abnormal = base / "abnormal.json"
+            if abnormal.exists():
+                with abnormal.open(encoding="utf-8") as handle:
+                    data = json.load(handle)
+                for key in SPLITS.values():
+                    for record in data.get(key, []):
+                        binary[record["serial"]] = record.get("class_name")
+
+            path = base / "annotation.json"
+            if path.exists():
+                with path.open(encoding="utf-8") as handle:
+                    data = json.load(handle)
+                for record in data.get("data", []):
+                    serial = record["serial"]
+                    annotated[serial] = {
+                        "serial": serial,
+                        "age": record.get("age"),
+                        "symptom": record.get("symptom", []),
+                        "abnormal_label": binary.get(serial),
+                    }
+            self._annotated = annotated
 
     @property
     def available(self) -> bool:

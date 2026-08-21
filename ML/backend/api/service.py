@@ -51,11 +51,35 @@ def _ground_truth_from_filename(filename: str, predicted_label: str, sha256: str
     if not match:
         return None
 
+    serial = match.group(1).zfill(5)
     try:
         catalog = get_catalog()
-        record = catalog.get(match.group(1).zfill(5))
-    except (CatalogUnavailable, KeyError):
+    except CatalogUnavailable:
         return None
+
+    try:
+        record = catalog.get(serial)
+    except KeyError:
+        # Known to CAUEEG but outside the three-class task (parkinsonian
+        # syndrome, TGA, FTD, NPH). Report that plainly rather than letting the
+        # interface call a catalogued recording "unknown", and never guess a
+        # class the benchmark deliberately leaves unassigned.
+        excluded = catalog.excluded_record(serial)
+        if excluded is None:
+            return None
+        return {
+            "class_name": None,
+            "class_label": None,
+            "split": None,
+            "age": excluded.get("age"),
+            "symptom": excluded.get("symptom", []),
+            "correct": None,
+            "serial": excluded["serial"],
+            "inferred_from": "filename",
+            "excluded_from_task": True,
+            "abnormal_label": excluded.get("abnormal_label"),
+        }
+
     if not record.get("class_name"):
         return None
 
