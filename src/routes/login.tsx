@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/login")({
+  // Set by the shell's guard when an unauthenticated visitor asks for a page.
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } =>
+    typeof search["redirect"] === "string" ? { redirect: search["redirect"] } : {},
   head: () => ({
     meta: [
       { title: "Sign in — QSFE-Net Research Platform" },
@@ -21,6 +24,9 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
+  // Never bounce back to an absolute URL a query string could smuggle in.
+  const target = redirect?.startsWith("/") && !redirect.startsWith("//") ? redirect : "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +34,8 @@ function LoginPage() {
 
   // Landing here with a live session is a dead end otherwise.
   useEffect(() => {
-    if (user) navigate({ to: "/dashboard" });
-  }, [user, navigate]);
+    if (user) navigate({ to: target });
+  }, [user, navigate, target]);
 
   return (
     <AuthLayout title="Sign in" subtitle="Researcher access to the QSFE-Net analysis workspace">
@@ -41,7 +47,7 @@ function LoginPage() {
           setError(null);
           try {
             await login(email, password);
-            navigate({ to: "/dashboard" });
+            navigate({ to: target });
           } catch (err) {
             setError(err instanceof Error ? err.message : "Sign in failed.");
           } finally {
@@ -63,8 +69,7 @@ function LoginPage() {
           No account?{" "}
           <Link to="/register" className="text-primary hover:underline">
             Register
-          </Link>{" "}
-          · The dashboard is publicly viewable in this demo build.
+          </Link>
         </p>
       </form>
     </AuthLayout>

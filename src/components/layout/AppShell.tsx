@@ -15,7 +15,7 @@ import {
   Upload,
   Users,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { useAuth } from "@/context/AuthContext";
@@ -76,7 +76,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { user, logout } = useAuth();
+  const { user, ready, logout } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -104,6 +104,20 @@ export function AppShell({
   // Unchanged active-route rule: exact match, or a parent of a detail route.
   const isActive = (to: string) =>
     pathname === to || (to !== "/dashboard" && pathname.startsWith(to + "/"));
+
+  // Every page that renders inside the shell is behind the session. `ready` is
+  // false until AuthProvider has checked the stored token, so this must not fire
+  // during that window or a valid session would be bounced on every reload.
+  // `redirect` lets sign-in return the user to the page they asked for.
+  useEffect(() => {
+    if (ready && !user) {
+      navigate({ to: "/login", search: { redirect: pathname }, replace: true });
+    }
+  }, [ready, user, navigate, pathname]);
+
+  if (!ready || !user) {
+    return <SessionGate checking={!ready} />;
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -341,6 +355,22 @@ function NavGroup({
             </Link>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/** Shown while the stored token is being checked, and during the redirect to
+ *  sign-in. Deliberately minimal: no shell chrome for a session that may not
+ *  exist, and no flash of a "signed out" message for a session that does. */
+function SessionGate({ checking }: { checking: boolean }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="text-center">
+        <div className="label-xs">{checking ? "Checking session" : "Sign-in required"}</div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {checking ? "One moment…" : "Redirecting to sign in…"}
+        </p>
       </div>
     </div>
   );

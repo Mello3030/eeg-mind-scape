@@ -1,6 +1,6 @@
 % =====================================================================
-%  QSFE-Net Research Platform — Phase II Report (website / platform only)
-%  Single file. Compile:  pdflatex report   (twice, for refs + ToC)
+%  QSFE-Net Research Platform — Phase II Report (the web platform)
+%  Single file. Compile:  tectonic report.tex     (or pdflatex twice)
 % =====================================================================
 \documentclass[11pt,a4paper]{article}
 
@@ -37,35 +37,38 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
 \titleformat{\section}{\normalfont\large\bfseries\color{accent}}{\thesection.}{0.5em}{}
-\titlespacing*{\section}{0pt}{12pt}{4pt}
+\titlespacing*{\section}{0pt}{11pt}{3pt}
 \titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.5em}{}
 \titlespacing*{\subsection}{0pt}{8pt}{2pt}
 \captionsetup{font=small,labelfont={bf,color=accent},skip=4pt}
 \setlist{topsep=2pt,itemsep=1pt,parsep=0pt,leftmargin=*}
 
 \pagestyle{fancy}\fancyhf{}
-\fancyhead[L]{\small\itshape QSFE-Net Research Platform}
+\fancyhead[L]{\small\itshape QSFE-Net Research Platform --- Phase II}
 \fancyhead[R]{\small\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
-\newcommand{\code}[1]{\texttt{\small #1}}
+% Size-neutral: inside a \scriptsize table a hardcoded \small would render
+% LARGER than the surrounding text and overflow the column.
+\newcommand{\code}[1]{\texttt{#1}}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+% Ragged-right elastic column: avoids the overfull boxes that justified X
+% columns produce around long \texttt{} paths.
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcommand{\stDone}{\textcolor{okgreen}{\textbf{Done}}}
 \newcommand{\stPart}{\textcolor{warnamber}{\textbf{Partial}}}
 \newcommand{\stTodo}{\textcolor{stopred}{\textbf{Pending}}}
+\newcommand{\stFixed}{\textcolor{okgreen}{\textbf{Fixed}}}
+\newcommand{\stOpen}{\textcolor{warnamber}{\textbf{Open}}}
 
-% Screenshot slot: prints the image if present, else a placeholder box.
-\newcommand{\shot}[3]{%
-  \begin{figure}[H]\centering
-  \IfFileExists{figures/#1}{\includegraphics[width=0.85\linewidth]{figures/#1}}%
-  {\begin{tikzpicture}
-     \draw[dashed,rulegrey,fill=softgrey] (0,0) rectangle (12,4.4);
-     \node[align=center,text=accent,font=\small] at (6,2.4)
-       {\textbf{Screenshot slot}\\[3pt]\code{report/figures/#1}};
-   \end{tikzpicture}}%
-  \caption{#2}\label{fig:#3}\end{figure}}
+% Framed screenshot; falls back to a placeholder so the file always compiles.
+\newcommand{\shot}[2][\linewidth]{%
+  \IfFileExists{figures/#2}%
+    {\fbox{\includegraphics[width=\dimexpr#1-2\fboxsep-2\fboxrule\relax]{figures/#2}}}%
+    {\fbox{\parbox[c][22mm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}%
+      {\centering\small missing: \code{figures/#2}}}}}
 
 \begin{document}
 
@@ -80,8 +83,9 @@
 \vspace{8pt}
 {\large A Web Platform for Interpretable EEG Dementia-Screening Research\par}
 \vspace{10pt}
-{\small\itshape Scope of this phase: the web application. The QSFE-Net model
-itself was reported in Phase I and is consumed here as an inference service.}
+{\small\itshape Scope of this phase: the web application and its working.
+The QSFE-Net model was reported in Phase~I and is consumed here as an
+inference service behind a fixed contract.}
 
 \vspace{18pt}{\color{accent}\rule{\linewidth}{0.6pt}}\vspace{18pt}
 {\small Submitted in partial fulfilment of the requirements for the degree of\\
@@ -114,13 +118,15 @@ into named clinical quantities, a server-decimated EEG viewer, and a
 \emph{measured-metrics} policy under which no performance number is hardcoded in
 the client --- every figure is computed on demand from the active checkpoint.
 
-The platform comprises 14 screens and 5{,}965 lines of application TypeScript on
-the client and 2{,}248 lines of Python across 23 endpoints on the server. An
-independent recomputation confirmed that the accuracy, macro-F1 and confusion
-matrix the platform serves are reproduced exactly from the checkpoint,
-validating the measured-metrics design; the same pass surfaced three defects,
-reported here with corrective actions. Implementation stands at approximately
-80\%. \textbf{The model architecture, features, training and ablation are Phase~I
+The platform comprises 13 screens and 5{,}965 lines of application TypeScript on
+the client, and 2{,}248 lines of Python across 23 endpoints on the server. Every
+screenshot in Section~\ref{sec:walk} was captured from a live instance running
+against real data. An independent recomputation confirmed that the accuracy,
+macro-F1 and confusion matrix the platform serves are reproduced exactly from
+the checkpoint, validating the measured-metrics design; the same verification
+pass surfaced three defects, two of which have since been fixed and are shown
+here before and after. Implementation stands at approximately 82\%.
+\textbf{The model architecture, features, training and ablation are Phase~I
 material and are not revisited.}
 
 \vspace{4pt}\noindent\fcolorbox{warnamber}{yellow!8}{\parbox{0.96\linewidth}{%
@@ -128,7 +134,7 @@ material and are not revisited.}
 never a diagnosis. This is a research prototype and must not be used for
 clinical decision-making.}}
 
-\vspace{4pt}
+\vspace{2pt}
 {\small\tableofcontents}
 \clearpage
 
@@ -189,7 +195,7 @@ scale.
 
 \begin{table}[H]\centering\caption{Objectives and success criteria.}
 \label{tab:obj}\footnotesize
-\begin{tabularx}{\linewidth}{@{}C{0.7cm} L{3.6cm} X@{}}
+\begin{tabularx}{\linewidth}{@{}C{0.7cm} L{3.4cm} Y@{}}
 \toprule
 \textbf{ID} & \textbf{Objective} & \textbf{Success criterion} \\
 \midrule
@@ -215,12 +221,12 @@ and how the web tier should be secured.
 
 \begin{table}[H]\centering
 \caption{Literature studied and its effect on the platform design.}
-\label{tab:lit}\scriptsize\renewcommand{\arraystretch}{1.2}
-\begin{tabularx}{\linewidth}{@{}C{0.55cm} L{3.5cm} L{3.4cm} X@{}}
+\label{tab:lit}\scriptsize\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}C{0.5cm} L{3.2cm} L{3.2cm} Y@{}}
 \toprule
 \textbf{\#} & \textbf{Work} & \textbf{Key contribution} & \textbf{Design consequence here} \\
 \midrule
-1 & Cai et al.\ 2019~\cite{cai2019} & Practitioners need capabilities, design objective and \emph{case-level} behaviour; global accuracy alone satisfies none & Case-first result screen; aggregate metrics moved to a separate page; a persistent provenance panel \\
+1 & Cai et al.\ 2019~\cite{cai2019} & Practitioners need capabilities, design objective and \emph{case-level} behaviour; global accuracy alone satisfies none & Case-first result screen; aggregate metrics on a separate page; a persistent provenance panel \\
 2 & Sendak et al.\ 2020~\cite{sendak2020} & A ``Model Facts'' label must travel \emph{with} the prediction & Disclaimer, checkpoint identity and evaluated split on every screen and in every exported report \\
 3 & Rudin 2019~\cite{rudin2019} & Post-hoc explanations of opaque models are unreliable surrogates & Display the network's own gate vector, an actual internal quantity; no surrogate explainer; wording says ``contribution'', not ``cause'' \\
 4 & Ribeiro et al.\ 2016~\cite{ribeiro2016}; Lundberg \& Lee 2017~\cite{lundberg2017} & LIME / SHAP post-hoc attribution & Evaluated and \emph{deferred}: costly over 830 features and would be confused with the genuine gates (cf.\ \#3) \\
@@ -250,10 +256,10 @@ ships training scripts with no interface. This platform occupies that gap.
 \subsection{System architecture}
 
 A React client talks over HTTP/JSON to a single FastAPI process containing two
-separated layers: an \emph{application} layer (this phase) and the \emph{inference}
-layer (Phase~I). Co-locating them avoids sending a multi-megabyte recording over
-the wire twice, while the source boundary stays explicit so the engine can be
-extracted into its own service later.
+separated layers: an \emph{application} layer (this phase) and the
+\emph{inference} layer (Phase~I). Co-locating them avoids sending a
+multi-megabyte recording over the wire twice, while the source boundary stays
+explicit so the engine can be extracted into its own service later.
 
 \begin{figure}[H]\centering
 \resizebox{0.98\linewidth}{!}{%
@@ -266,7 +272,7 @@ extracted into its own service later.
   arr/.style={-{Stealth[length=2mm]},draw=accent,thick},
   g/.style={-{Stealth[length=1.6mm]},draw=black!45}]
 
-\node[box] (c1) at (0,0)   {14 screens\\TanStack Router};
+\node[box] (c1) at (0,0)   {13 screens\\TanStack Router};
 \node[box] (c2) at (3.2,0) {Auth context};
 \node[box] (c3) at (6.4,0) {Query cache};
 \node[box] (c4) at (9.6,0) {API client\\\code{services/api.ts}};
@@ -315,7 +321,7 @@ layer directly.}\label{fig:arch}
 \subsection{Use case diagram}
 
 \begin{figure}[H]\centering
-\resizebox{0.92\linewidth}{!}{%
+\resizebox{0.90\linewidth}{!}{%
 \begin{tikzpicture}[font=\scriptsize,
   uc/.style={draw=accent!60,fill=white,ellipse,minimum width=34mm,
              minimum height=8mm,align=center,inner sep=0pt},
@@ -362,7 +368,7 @@ layer directly.}\label{fig:arch}
 \subsection{Class diagram}
 
 \begin{figure}[H]\centering
-\resizebox{0.98\linewidth}{!}{%
+\resizebox{0.96\linewidth}{!}{%
 \begin{tikzpicture}[font=\scriptsize,
   cls/.style={draw=accent!55,fill=white,rectangle split,rectangle split parts=2,
               rectangle split part align=left,align=left,text width=40mm,inner sep=3pt},
@@ -397,7 +403,7 @@ layer directly.}\label{fig:arch}
 \node[svc] (sto) at (0,-7.6) {\textbf{ObjectStorage}\nodepart{two}\raggedright
   + saveUpload() : StoredFile\\ + resolve() \textperiodcentered\ + delete()};
 \node[svc] (rep) at (5.8,-8.2) {\textbf{ReportBuilder}\nodepart{two}\raggedright
-  + build() \textperiodcentered\ + renderHtml()\\ + renderPdf()};
+  + build()\\ + renderHtml()\\ + renderPdf()};
 \node[svc] (eng) at (11.8,-8.2) {\textbf{InferenceEngine} \emph{(Phase I)}\nodepart{two}\raggedright
   + predictEdf() \textperiodcentered\ + predictFeatures()\\ + evaluateSplit()};
 
@@ -406,9 +412,11 @@ layer directly.}\label{fig:arch}
 \draw[rel] (up.east)--node[below,font=\tiny,pos=.1]{1}node[below,font=\tiny,pos=.9]{0..*}(pred.south west);
 \draw[arrw] (svc.east)--node[above,font=\tiny]{creates}(up.west);
 \draw[arrw] (svc.south)--node[right,font=\tiny]{uses}(sto.north);
-\draw[arrw] (svc.south east) .. controls +(3,-3) and +(-3,0) .. node[below,font=\tiny,pos=.65]{invokes}(eng.west);
+% Routed below ReportBuilder: a direct curve would cut straight through it.
+\draw[arrw] (svc.south east) .. controls +(1.5,-5.4) and +(-3.5,-2.8) ..
+  node[below,font=\tiny,pos=.5]{invokes}(eng.south west);
 \draw[arrw] (rep.east)--node[above,font=\tiny]{reads}(eng.west);
-\node[font=\tiny,text=black!55,align=left,anchor=north west] at (-2.2,-9.6)
+\node[font=\tiny,text=black!55,align=left,anchor=north west] at (-2.2,-11.6)
   {Cascade: deleting a Patient removes its Uploads and Predictions; deleting an
    Upload removes its Predictions.};
 \end{tikzpicture}}
@@ -419,7 +427,7 @@ bulky payloads are JSON columns beside them.}\label{fig:class}
 \subsection{Sequence diagram: upload and score}
 
 \begin{figure}[H]\centering
-\resizebox{0.96\linewidth}{!}{%
+\resizebox{0.95\linewidth}{!}{%
 \begin{tikzpicture}[font=\scriptsize,
   head/.style={draw=accent!55,fill=accentlt,minimum width=21mm,minimum height=6mm,
                align=center,font=\scriptsize\bfseries},
@@ -460,7 +468,7 @@ Nine modules across four concerns. Figure~\ref{fig:blocks} is the block diagram;
 Table~\ref{tab:modules} gives the technique adopted for each and its source.
 
 \begin{figure}[H]\centering
-\resizebox{0.96\linewidth}{!}{%
+\resizebox{0.95\linewidth}{!}{%
 \begin{tikzpicture}[font=\scriptsize,
   mod/.style={draw=accent!60,fill=white,rounded corners=2pt,minimum width=30mm,
               minimum height=13mm,align=center,text width=29mm,inner sep=2pt},
@@ -510,8 +518,8 @@ Table~\ref{tab:modules} gives the technique adopted for each and its source.
 
 \begin{table}[H]\centering
 \caption{Module specifications: technique adopted and its source.}
-\label{tab:modules}\scriptsize\renewcommand{\arraystretch}{1.2}
-\begin{tabularx}{\linewidth}{@{}C{0.6cm} L{2.6cm} X@{}}
+\label{tab:modules}\scriptsize\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}C{0.55cm} L{2.4cm} Y@{}}
 \toprule
 \textbf{ID} & \textbf{Module} & \textbf{Technique adopted} \\
 \midrule
@@ -520,8 +528,9 @@ M1 & Identity \& session &
 and rehash-on-login~\cite{biryukov2016}, chosen because memory-hardness resists
 GPU-accelerated offline attack. \textbf{Stateless HS256 JWT}~\cite{rfc7519} with
 the algorithm pinned at verification and a 12-hour lifetime; statelessness
-follows Fielding's REST constraint~\cite{fielding2000}, so restart or replication
-does not invalidate sessions. Any 401 clears the client token centrally. \\
+follows Fielding's REST constraint~\cite{fielding2000}. Any 401 clears the token
+centrally, and sign-in, registration and sign-out all clear the client query
+cache so one user never sees another's cached cohort. \\
 \addlinespace[2pt]
 M2 & Patient registry &
 CRUD over a de-identified entity (external code, age, sex, notes). A nullable
@@ -552,7 +561,10 @@ aggregated scalars (label, confidence, three probabilities, four gates, dominant
 stream, checkpoint, timestamp) are typed columns; bulky always-read-together
 payloads (biomarkers, per-crop, recording, timings, ground truth) are JSON. A
 composite (patient, created\_at) index serves the timeline query. SQLite by
-default, PostgreSQL confined to one schema for shared deployment. \\
+default, PostgreSQL confined to one schema for shared deployment; a startup
+diagnostic performs a real round trip and warns loudly when running on SQLite,
+because a host that wipes the container filesystem loses data silently while the
+API still looks healthy. \\
 \addlinespace[2pt]
 M6 & Interpretability &
 (i) \emph{Gate normalisation}: four raw activations shown as absolute weights
@@ -580,9 +592,9 @@ M9 & Measured metrics &
 A \textbf{no-transcription policy}. Accuracy, macro-F1, the confusion matrix and
 per-class metrics are computed on demand against the loaded checkpoint;
 parameter count and device are read from it; the ablation table is parsed from
-the file the training run wrote. Metrics are reported disaggregated by
-class~\cite{mitchell2019} and cached \emph{keyed by checkpoint identity},
-invalidated on reload~\cite{amershi2019}. \\
+the file the training run wrote and labelled with the split it actually used.
+Metrics are reported disaggregated by class~\cite{mitchell2019} and cached
+\emph{keyed by checkpoint identity}, invalidated on reload~\cite{amershi2019}. \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -591,7 +603,7 @@ invalidated on reload~\cite{amershi2019}. \\
 
 \begin{table}[H]\centering\caption{Decisions, alternatives and rationale.}
 \label{tab:dec}\scriptsize
-\begin{tabularx}{\linewidth}{@{}L{2.9cm} L{3.1cm} X@{}}
+\begin{tabularx}{\linewidth}{@{}L{2.7cm} L{2.9cm} Y@{}}
 \toprule
 \textbf{Decision} & \textbf{Alternative} & \textbf{Rationale} \\
 \midrule
@@ -631,9 +643,9 @@ filename.
 
 \subsection{Completion status}
 
-\begin{table}[H]\centering\caption{Module-wise status. Weighted overall $\approx$80\%.}
+\begin{table}[H]\centering\caption{Module-wise status. Weighted overall $\approx$82\%.}
 \label{tab:status}\footnotesize
-\begin{tabularx}{\linewidth}{@{}C{0.7cm} L{3.2cm} C{1.4cm} C{0.8cm} X@{}}
+\begin{tabularx}{\linewidth}{@{}C{0.7cm} L{3.1cm} C{1.5cm} C{0.7cm} Y@{}}
 \toprule
 \textbf{ID} & \textbf{Module} & \textbf{Status} & \textbf{\%} & \textbf{Remaining} \\
 \midrule
@@ -645,7 +657,7 @@ M5 & Persistence & \stDone & 100 & --- \\
 M6 & Interpretability & \stDone & 100 & --- \\
 M7 & Signal viewer & \stPart & 80 & Amplitude scaling, stacked channels \\
 M8 & Reporting & \stPart & 95 & Cohort-level export \\
-M9 & Measured metrics & \stPart & 85 & Obs.~1 and Obs.~2 \\
+M9 & Measured metrics & \stDone & 100 & Obs.~1 and Obs.~2 now fixed \\
 \multicolumn{2}{@{}l}{Tests / CI} & \stPart & 40 & Two smoke suites; no unit tests \\
 \multicolumn{2}{@{}l}{Deployment} & \stPart & 35 & No app container or CI \\
 \multicolumn{2}{@{}l}{Accessibility} & \stTodo & 20 & Audit not yet performed \\
@@ -653,7 +665,7 @@ M9 & Measured metrics & \stPart & 85 & Obs.~1 and Obs.~2 \\
 \end{tabularx}
 \end{table}
 
-\subsection{What was built}
+\subsection{Technical realisation}
 
 The client is React~19 with file-based, fully typed TanStack routing --- a link
 to a missing route is a compile error --- and all server state held in TanStack
@@ -662,91 +674,192 @@ prediction list through cache invalidation rather than hand-written propagation.
 The server is FastAPI with SQLAlchemy~2.0 ORM models and Pydantic schemas at the
 boundary, so the OpenAPI description is generated rather than written.
 
-\begin{table}[H]\centering\caption{Screens implemented (application TypeScript only).}
-\label{tab:routes}\scriptsize
-\begin{tabularx}{\linewidth}{@{}L{2.4cm} C{0.8cm} C{1.0cm} X@{}}
-\toprule
-\textbf{Route} & \textbf{LoC} & \textbf{Module} & \textbf{Function} \\
-\midrule
-\code{/login}, \code{/register} & 257 & M1 & Credentials; role selection \\
-\code{/dashboard} & 438 & M9 & KPIs, class distribution, per-class metrics, mean gate weights, activity trend \\
-\code{/patients} & 133 & M2 & Cohort registry with search \\
-\code{/patients/:id} & 352 & M2, M5 & Probability trajectory, source recordings, gate history \\
-\code{/upload} & 289 & M3, M4 & Drag-and-drop, metadata form, staged status, health-gated submit \\
-\code{/predictions} & 149 & M5 & Filterable history \\
-\code{/predictions/:id} & 451 & M6, M8 & Probabilities, gate breakdown, decoded biomarkers, provenance, export \\
-\code{/analysis} & 513 & M7 & EEG viewer with per-stream biomarker exploration \\
-\code{/model} & 281 & --- & Architecture view, measured gate analysis \\
-\code{/performance} & 411 & M9 & Confusion matrix, per-class metrics, ablation, baselines \\
-\code{/about}, \code{/settings} & 429 & M9 & Scope and limitations; checkpoint switching; environment \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-Supporting these: an app shell with grouped navigation and a live health
-indicator (340 LoC), mobile drawer (164), breadcrumbs (80), a shared UI kit
-(254), the auth context (82), and the single API client (777) that owns the
-entire wire format. Forty-six Radix-based primitives are vendored beneath and
-excluded from all counts.
-
 \begin{table}[H]\centering\caption{Delivered volume.}\label{tab:vol}\footnotesize
-\begin{tabularx}{\linewidth}{@{}X R{2.6cm}@{}}
+\begin{tabularx}{\linewidth}{@{}Y R{2.4cm}@{}}
 \toprule \textbf{Measure} & \textbf{Value} \\ \midrule
-Client modules / routed screens & 31 / 14 \\
-Client application TypeScript & 5{,}965 LoC \\
+Client modules / routed screens & 31 / 13 \\
+Client application TypeScript (excl.\ 46 vendored UI primitives) & 5{,}965 LoC \\
 Server application layer (this phase) & 2{,}248 LoC \\
-HTTP endpoints, application layer & 23 \\
+HTTP endpoints, application layer / total surface & 23 / 36 \\
 Persistent tables & 4 \\
-Workspace state & 3 users, 14 patients, 4 uploads, 13 predictions \\
+Live workspace: users / patients & 3 / 15 \\
+Live workspace: uploads / stored analyses & 5 / 14 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection{Module-wise screenshots}
+\subsection{Page-by-page walkthrough}
+\label{sec:walk}
 
-\shot{01-login.png}{\textbf{M1} --- sign-in; Argon2id verification, JWT issued.}{login}
-\shot{02-dashboard.png}{\textbf{M9} --- dashboard. Every figure is computed at request time; none is stored in the client.}{dash}
-\shot{03-upload.png}{\textbf{M3, M4} --- new analysis: drag-and-drop, client-side validation, staged progress, health-gated submit.}{upload}
-\shot{04-result-gates.png}{\textbf{M6} --- result detail: class probabilities with gate weights as relative stream contributions, plus decoded biomarkers.}{gates}
-\shot{05-eeg-viewer.png}{\textbf{M7} --- EEG viewer: a window of the source EDF, decimated server-side, with scored crop positions marked.}{viewer}
-\shot{06-performance.png}{\textbf{M9} --- measured performance: confusion matrix and per-class metrics served from the active checkpoint.}{perf}
+Every screenshot below was captured from a live instance
+(\code{qsfe\_npz\_best.pth} on CUDA, 15 patients and 14 stored analyses)
+using an automated browser at 1500\,px width. Table~\ref{tab:pages} summarises
+what each screen does and the endpoints behind it; the figures follow.
 
+\begin{table}[H]\centering\caption{Every screen, its function, and the endpoints behind it. The \code{/api} prefix is omitted in the last column.}
+\label{tab:pages}\scriptsize\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}L{2.5cm} C{0.7cm} Y L{3.5cm}@{}}
+\toprule
+\textbf{Route} & \textbf{LoC} & \textbf{What it does} & \textbf{Endpoints} \\
+\midrule
+\code{/login} & 178 & Credential entry; on success stores the JWT and clears any cached data from a previous session. Demo accounts are hinted inline. & \code{POST /auth/login} \\
+\code{/register} & 79 & Account creation with a researcher/administrator role choice. & \code{POST /auth/register} \\
+\code{/dashboard} & 438 & Workspace overview: analysis counts by predicted class, mean confidence, measured test accuracy and macro-F1, per-class metric bars, agreement with CAUEEG ground truth over labelled recordings only, mean gate weights by predicted class, an analyses-per-day trend, and recent activity. & \code{/history/stats} \newline \code{/history} \newline \code{/patients} \newline \code{/model/info} \newline \code{/model/performance} \\
+\code{/patients} & 133 & Cohort registry: de-identified code, age, sex, analysis and upload counts, latest prediction, searchable. & \code{GET /patients} \\
+\code{/patients/:id} & 352 & One subject: identifying fields, class-probability trajectory across sessions, distinct source recordings, gate-weight history, and the full analysis list. & \code{GET /patients/\{id\}} \newline \code{/history/patients/} \code{\{id\}/timeline} \\
+\code{/upload} & 289 & Drag-and-drop EDF with client-side type and size validation, patient metadata form, a staged UPLOAD/PROCESSING/COMPLETED indicator, the inference pipeline described alongside, and a submit path gated on the live health check. & \code{POST /analyses} \newline \code{/health} \\
+\code{/predictions} & 149 & Filterable history of every analysis: prediction, confidence, source kind, patient, timestamp. & \code{GET /history} \\
+\code{/predictions/:id} & 451 & The interpretability report for one analysis: class probabilities, the four gate weights as relative stream contributions with the dominant stream named, decoded biomarkers per stream, provenance (checkpoint, device, crops, hash, timings) and JSON/HTML/PDF export. & \code{GET /analyses/\{id\}} \newline \code{/reports/\{id\}} \\
+\code{/analysis} & 513 & EEG viewer over the source EDF with channel selection, zoom and pan, the scored crop windows shaded on the timeline, plus per-stream feature exploration and that stream's gate activation across the workspace. & \code{/analyses/\{id\}/} \code{waveform} \newline \code{GET /analyses/\{id\}} \\
+\code{/model} & 281 & Architecture view with the forward pass laid out stream by stream, and measured gate analysis aggregated over stored analyses. & \code{/model/info} \newline \code{GET /history} \\
+\code{/performance} & 411 & Confusion matrix, per-class precision/recall/F1/support, the ablation table labelled with the split it used, and published baselines marked as external. & \code{/model/performance} \newline \code{/model/ablation} \\
+\code{/settings} & 250 & Account details, active model, checkpoint inventory with stream dimensions and extractor compatibility, and the resolved server environment. & \code{/model/checkpoints} \newline \code{POST /model/reload} \newline \code{/health} \\
+\code{/about} & 179 & Scientific background, the four streams, and an explicit limitations section --- the platform's model-facts page~\cite{sendak2020}. & \code{/model/info} \newline \code{/model/performance} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]\centering
+\begin{minipage}[b]{0.485\linewidth}\centering
+  \shot{01-login.png}\\[2pt]{\scriptsize (a) \code{/login}}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.485\linewidth}\centering
+  \shot{02-register.png}\\[2pt]{\scriptsize (b) \code{/register}}
+\end{minipage}
+\caption{\textbf{M1 --- Identity.} Credentials are verified against Argon2id
+hashes and a 12-hour HS256 token is issued. Signing in clears the client query
+cache so no cached record survives a user change.}\label{fig:auth}
+\end{figure}
+
+\begin{figure}[H]\centering
+\shot[0.97\linewidth]{03-dashboard.png}
+\caption{\textbf{M9 --- Dashboard.} Left group counts this workspace; right
+group is the model measured on the held-out split. The 53.39\% accuracy, 0.5226
+macro-F1 and the per-class bars are computed at request time from the active
+checkpoint, not stored in the client. ``Agreement with CAUEEG truth'' is
+deliberately restricted to the 9 of 14 analyses that have a verified label.}
+\label{fig:dash}
+\end{figure}
+
+\begin{figure}[H]\centering
+\begin{minipage}[b]{0.485\linewidth}\centering
+  \shot{04-patients.png}\\[2pt]{\scriptsize (a) \code{/patients}}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.485\linewidth}\centering
+  \shot{07-predictions.png}\\[2pt]{\scriptsize (b) \code{/predictions}}
+\end{minipage}
+\caption{\textbf{M2, M5 --- Registry and history.} The cohort registry (a) and
+the filterable analysis history (b). Both are ordinary SQL queries over the
+typed columns of the hybrid schema.}\label{fig:lists}
+\end{figure}
+
+\begin{figure}[H]\centering
+\shot[0.97\linewidth]{05-patient.png}
+\caption{\textbf{M2 --- Patient record.} Class-probability trajectory across
+sessions, distinct source recordings, and gate-weight history for one subject.
+This is what makes repeat recordings a trajectory rather than unrelated
+results.}\label{fig:patient}
+\end{figure}
+
+\begin{figure}[H]\centering
+\shot[0.97\linewidth]{06-upload.png}
+\caption{\textbf{M3, M4 --- New analysis.} Drag-and-drop ingestion with
+client-side validation before any bytes are sent, patient metadata, a staged
+status indicator, and the server-side pipeline described alongside. The panel at
+lower right reads the live health endpoint and states the checkpoint and device
+that will score the file.}\label{fig:upload}
+\end{figure}
+
+\begin{figure}[H]\centering
+\shot[0.97\linewidth]{08-result.png}
+\caption{\textbf{M6, M8 --- Result detail.} The case-first screen
+Cai et al.~\cite{cai2019} argue for: probabilities, then the gate weights as
+relative stream contributions, then biomarkers decoded to named electrodes and
+bands, then provenance. Gate weights are labelled stream contribution, not
+causal explanation.}\label{fig:result}
+\end{figure}
+
+\begin{figure}[H]\centering
+\shot[0.97\linewidth]{09-analysis.png}
+\caption{\textbf{M7 --- EEG viewer.} A 30\,s window of the source EDF read
+server-side and decimated from 200\,Hz to 67\,Hz for display; the shaded band
+marks where the scored crops sit. The caption states explicitly that these are
+raw samples, not the z-normalised tensor the model consumed. Below, the selected
+stream is described and its gate activation summarised across the
+workspace.}\label{fig:viewer}
+\end{figure}
+
+\begin{figure}[H]\centering
+\shot[0.97\linewidth]{11-performance.png}
+\caption{\textbf{M9 --- Measured performance.} Confusion matrix and per-class
+metrics computed by scoring all 118 test patients in 4.16\,s. Two corrections
+from the verification pass are visible: ``Crops averaged 1 --- per recording,
+5 requested'' (Obs.~2) and the ablation column now headed \textbf{Val acc} with
+the hint ``validation accuracy, not test'' (Obs.~1).}\label{fig:perf}
+\end{figure}
+
+\begin{figure}[H]\centering
+\shot[0.97\linewidth]{10-model.png}
+\caption{\textbf{Architecture view.} The forward pass laid out stream by stream
+with measured gate analysis. The figures come from \code{/model/info}, read out
+of the loaded checkpoint rather than written into the page.}\label{fig:model}
+\end{figure}
+
+\begin{figure}[H]\centering
+\begin{minipage}[b]{0.485\linewidth}\centering
+  \shot{12-settings.png}\\[2pt]{\scriptsize (a) \code{/settings}}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.485\linewidth}\centering
+  \shot{13-about.png}\\[2pt]{\scriptsize (b) \code{/about}}
+\end{minipage}
+\caption{\textbf{M9 and model facts.} Settings (a) lists every checkpoint on
+disk with its stream dimensions and whether it matches the current feature
+extractor; switching one invalidates every cached metric. About (b) is the
+model-facts page: background, the four streams, and an explicit limitations
+section.}\label{fig:sysadmin}
+\end{figure}
+
+\clearpage
 \subsection{Results, observations and analysis}
 
 \textbf{Latency.} Timings are recorded per stage on every scored upload and
 stored with the prediction, so Table~\ref{tab:lat} is read out of the workspace
 database rather than measured separately. Device was CUDA.
 
-\begin{table}[H]\centering\caption{Per-stage latency of scored uploads (ms), from stored provenance.}
+\begin{table}[H]\centering\caption{Per-stage latency of the five scored uploads (ms), from stored provenance.}
 \label{tab:lat}\footnotesize
 \begin{tabular}{@{}l rrrr r@{}}
 \toprule
 \textbf{Crops} & \textbf{Cropping} & \textbf{Features} & \textbf{Forward pass} & \textbf{Total} & \textbf{Recording} \\
 \midrule
-3 & 32.6 & 2{,}618.4 & 73.5 & 2{,}728.6 & 728\,s \\
-5 & 3.0 & 4{,}427.5 & 154.5 & 4{,}585.7 & 1{,}043\,s \\
-5 & 2.9 & 4{,}067.3 & 110.4 & 4{,}181.1 & 651\,s \\
-5 & 3.2 & 4{,}250.3 & 149.9 & 4{,}403.9 & 1{,}008\,s \\
+3 & 32.6 & 2{,}618.4 & \phantom{0}73.5 & 2{,}728.6 & \phantom{0}728\,s \\
+5 & \phantom{0}3.0 & 4{,}427.5 & 154.5 & 4{,}585.7 & 1{,}043\,s \\
+5 & \phantom{0}2.9 & 4{,}067.3 & 110.4 & 4{,}181.1 & \phantom{0}651\,s \\
+5 & \phantom{0}3.2 & 4{,}250.3 & 149.9 & 4{,}403.9 & 1{,}008\,s \\
+5 & \phantom{0}3.6 & 3{,}787.2 & \phantom{0}17.5 & 3{,}812.1 & \phantom{0}847\,s \\
 \midrule
-\textbf{Mean (5)} & \textbf{3.0} & \textbf{4{,}248.4} & \textbf{138.3} & \textbf{4{,}390.2} & \\
+\textbf{Mean (5 crops)} & \textbf{3.2} & \textbf{4{,}133.1} & \textbf{108.1} & \textbf{4{,}245.7} & \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \textbf{Observation A --- feature extraction dominates by two orders of
-magnitude.} At five crops it is 96.8\% of wall-clock time, the forward pass
-3.1\%, cropping 0.07\%. Per-crop cost is stable at 850--873\,ms across
-recordings of very different lengths, so cost scales with crop count, not
-duration. Three consequences: the threadpool dispatch is justified (a four-second
-CPU block would stall the event loop); GPU acceleration is nearly irrelevant to
-perceived latency, since the expensive stage is CPU signal processing; and the
-16-crop maximum would take roughly 14\,s, which sets the threshold for the
-asynchronous job path.
+magnitude.} At five crops it is 97.3\% of wall-clock time, the forward pass
+2.5\%, cropping 0.08\%. Per-crop extraction cost is 757--873\,ms across
+recordings ranging from 651\,s to 1{,}043\,s, so cost scales with crop count, not
+recording duration. Three consequences follow, all anticipated by the design.
+The threadpool dispatch is justified --- a four-second CPU-bound block would
+otherwise stall the event loop for every other request. GPU acceleration is
+nearly irrelevant to perceived latency, because the expensive stage is SciPy
+signal processing on the CPU: a faster GPU would improve the 2.5\% and leave the
+97.3\% untouched. And the 16-crop maximum would take roughly 13\,s, which is past
+the point where a request should be backgrounded --- this sets the threshold for
+the asynchronous job path (T-21).
 
 \textbf{Verification of M9.} Objective O6 requires that no displayed metric be a
-transcription. To test this, the checkpoint was loaded independently, every
-patient in the evaluation split was scored outside the application, and the
-result compared with what the platform serves.
+transcription. The checkpoint was loaded independently, every patient in the
+evaluation split was scored outside the application, and the result compared
+with what the platform serves.
 
 \begin{table}[H]\centering
 \caption{Confusion matrix and per-class metrics served by the platform,
@@ -770,8 +883,8 @@ Dementia & 6  & 12 & \textbf{13} & & 0.5200 & 0.4194 & 0.4643 & 31 \\
 
 \textbf{Observation B --- the measured-metrics design works.} Accuracy,
 macro-F1 and every confusion cell match to four decimal places, which is the
-evidence for O6: the performance screen is derived from the checkpoint at request
-time and cannot silently disagree with the weights on disk. Reporting
+evidence for O6: the performance screen is derived from the checkpoint at
+request time and cannot silently disagree with the weights on disk. Reporting
 disaggregated by class~\cite{mitchell2019} also exposes what one accuracy figure
 hides --- recall on Dementia (0.4194) is the weakest of the three despite that
 class having the second-highest precision.
@@ -804,41 +917,54 @@ exists to let a researcher notice, which is the case-level behaviour
 Cai et al.~\cite{cai2019} identified as the practitioner's real need. Explaining
 \emph{why} the model weights streams this way is Phase~I territory.
 
-\textbf{Observation D --- three defects found during verification.} Recorded
-rather than quietly fixed, because two affect how results are \emph{labelled}
-and are therefore reporting-integrity issues.
+\textbf{Observation D --- three defects found, two fixed.} These were recorded
+rather than quietly patched, because two of them affect how results are
+\emph{labelled} and are therefore reporting-integrity issues --- precisely the
+class of problem the measured-metrics policy exists to prevent.
 
-\begin{table}[H]\centering\caption{Defects identified, with corrective action.}
+\begin{table}[H]\centering\caption{Defects found during verification and their resolution.}
 \label{tab:def}\scriptsize\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\linewidth}{@{}C{0.6cm} L{3.4cm} X L{2.2cm}@{}}
+\begin{tabularx}{\linewidth}{@{}C{0.5cm} L{3.0cm} Y C{1.1cm}@{}}
 \toprule
-\textbf{\#} & \textbf{Defect} & \textbf{Evidence} & \textbf{Action} \\
+\textbf{\#} & \textbf{Defect} & \textbf{Evidence and resolution} & \textbf{State} \\
 \midrule
-1 & The ablation table is served and displayed under the heading \emph{test
+1 & The ablation table was served and displayed under the heading \emph{test
 accuracy}, but the values are best \emph{validation} accuracy.
-& The Phase~I ablation script writes the best validation accuracy to the results
-file the platform parses; the platform relabels it on the way out.
-& Rename the field and relabel the column, or re-evaluate the five ablation
-checkpoints on the test split. T-15. \\
+& The Phase~I ablation script builds only a train and a validation loader and
+returns the best validation accuracy; the test split is never touched. The
+served field was renamed to \code{val\_accuracy}, the finding text now says
+``58.82\% validation'', and the column reads \textbf{Val acc} with the hint
+``validation accuracy, not test'' (visible in Figure~\ref{fig:perf}).
+& \stFixed \\
 \addlinespace[2pt]
-2 & The performance endpoint takes a crop count defaulting to 5, implying five
-crops are averaged per evaluated patient; only one cached crop exists per
-evaluation patient, so the parameter is inert there.
-& Cached feature files counted per patient: all 118 evaluation patients have
-exactly one crop; training patients have eight.
-& Clamp to the crops available and report the effective value. The accuracy is
-unaffected --- it is a genuine single-crop measurement --- only its description
-is wrong. T-16. \\
+2 & The performance endpoint took a crop count defaulting to 5, implying five
+crops were averaged per evaluated patient; only one cached crop exists per
+evaluation patient, so the parameter was inert there.
+& Cached feature files were counted per patient: all 118 evaluation patients
+have exactly one crop, training patients have eight. The endpoint now records
+the crops actually loaded and returns \code{n\_crops\_requested} alongside
+\code{n\_crops}; the KPI reads ``1 --- per recording, 5 requested''. The
+accuracy was never affected, only its description.
+& \stFixed \\
 \addlinespace[2pt]
-3 & A recording is written to the store before it is scored; if scoring then
-fails the file remains with no database row.
-& One orphaned 32\,KB file exists in the upload store with no \code{uploads}
-row, consistent with a malformed EDF stored and then rejected.
-& Compensating delete on the failure path, plus a sweep for unreferenced files.
-T-17. \\
+3 & A recording is written to the content-addressed store before it is scored;
+if scoring then fails, the file remains with no database row referencing it.
+& One orphaned 32\,KB file was found in the upload store with no \code{uploads}
+row, consistent with a malformed EDF that was stored and then failed header
+validation. Fix scheduled as T-17: a compensating delete on the failure path
+plus a sweep for unreferenced files.
+& \stOpen \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\textbf{Observation E --- silent data loss was designed out.} A startup
+diagnostic performs a real database round trip rather than reporting
+configuration, so a URL that is set but unreachable shows as disconnected
+instead of appearing healthy. When the backend is SQLite it logs an explicit
+non-persistence warning, because on a container host the file is wiped on every
+restart while writes continue to succeed --- the failure mode where the API looks
+healthy and the data is gone.
 
 \textbf{Testing.} Two end-to-end smoke suites exist --- one over the inference
 layer, one over the application layer against a throwaway database (registration,
@@ -850,7 +976,7 @@ component coverage and no CI; that is the first task of next semester.
 \section{Technology Stack}
 
 \begin{figure}[H]\centering
-\resizebox{0.98\linewidth}{!}{%
+\resizebox{0.97\linewidth}{!}{%
 \begin{tikzpicture}[font=\scriptsize,
   lyr/.style={draw=accent!45,fill=accentlt,rounded corners=2pt,minimum width=150mm},
   chip/.style={draw=rulegrey,fill=white,rounded corners=2pt,minimum height=6mm,
@@ -867,8 +993,8 @@ component coverage and no CI; that is the first task of next semester.
 
 \node[lyr,minimum height=7mm,fill=white,draw=black!35](L2) at (0,-1.9){};
 \node[side,text=black!60] at ([xshift=-3mm]L2.west){TRANSPORT};
-\node[chip] at (-3.2,-1.9){HTTP/JSON \textperiodcentered\ multipart};
-\node[chip] at (0.6,-1.9){Bearer JWT (HS256, RFC 7519)};
+\node[chip] at (-4.4,-1.9){HTTP/JSON + multipart};
+\node[chip] at (0.2,-1.9){Bearer JWT \textperiodcentered\ HS256};
 \node[chip] at (4.6,-1.9){CORS allow-list};
 
 \node[lyr,minimum height=12mm](L3) at (0,-3.7){}; \node[side] at ([xshift=-3mm]L3.west){SERVER};
@@ -898,11 +1024,11 @@ infrastructure; accented layers were built in this phase.}\label{fig:stack}
 
 \begin{table}[H]\centering\caption{Technologies, roles and references.}
 \label{tab:tech}\scriptsize
-\begin{tabularx}{\linewidth}{@{}L{2.6cm} C{1.1cm} X L{1.2cm}@{}}
+\begin{tabularx}{\linewidth}{@{}L{2.5cm} C{1.25cm} Y L{1.3cm}@{}}
 \toprule
 \textbf{Technology} & \textbf{Version} & \textbf{Role} & \textbf{Ref.} \\
 \midrule
-React & 19.2 & Component model for all 14 screens & \cite{react} \\
+React & 19.2 & Component model for all 13 screens & \cite{react} \\
 TanStack Router / Query & 1.170 / 5.101 & Typed file-based routing; all server state, caching and invalidation & \cite{tanstack} \\
 TypeScript & 5.8 & Static typing; the API client's types are the contract & \cite{typescript} \\
 Tailwind CSS / Radix UI & 4.2 / --- & Styling tokens; 46 accessible unstyled primitives & \cite{tailwind,radix} \\
@@ -916,6 +1042,7 @@ Jinja2 / ReportLab & 3.1 / 4.0 & HTML and PDF reports (M8) & \cite{jinja,reportl
 SQLite / PostgreSQL & 3.x / 16 & Default and shared-deployment stores & \cite{sqlite,postgresql} \\
 Docker Compose & --- & Optional local PostgreSQL & \cite{dockercompose} \\
 PyTorch, NumPy, SciPy, pyEDFlib & --- & Phase~I engine: forward pass, arrays, signal processing, EDF I/O & \cite{paszke2019,harris2020,virtanen2020,pyedflib} \\
+Playwright & --- & Automated capture of the screenshots in Section~\ref{sec:walk} & \cite{playwright} \\
 PGF/TikZ, pgfgantt & --- & All diagrams and the timeline in this report & \cite{tikz,pgfgantt} \\
 \bottomrule
 \end{tabularx}
@@ -935,7 +1062,7 @@ PostgreSQL for shared deployment.
 \section{Project Plan and Timeline}
 
 \begin{figure}[H]\centering
-\resizebox{0.98\linewidth}{!}{%
+\resizebox{0.97\linewidth}{!}{%
 \begin{ganttchart}[hgrid,vgrid,x unit=8mm,y unit title=7mm,y unit chart=5.6mm,
   title height=1,title label font=\scriptsize\bfseries,
   group label font=\scriptsize\bfseries,bar label font=\scriptsize,
@@ -960,41 +1087,40 @@ PostgreSQL for shared deployment.
 \ganttbar[progress=100]{T-08 M6 interpretability}{4}{5} \\
 \ganttbar[progress=80]{T-09 M7 signal viewer}{5}{6} \\
 \ganttbar[progress=95]{T-10 M8 reporting}{5}{6} \\
-\ganttbar[progress=85]{T-11 M9 measured metrics}{5}{6} \\
-\ganttgroup{Integration and reporting}{6}{8} \\
+\ganttbar[progress=100]{T-11 M9 measured metrics}{5}{6} \\
+\ganttgroup{Integration, verification, reporting}{6}{8} \\
 \ganttbar[progress=100]{T-12 Frontend--backend integration}{6}{7} \\
 \ganttbar[progress=100]{T-13 Verification pass, defect log}{7}{7} \\
-\ganttbar[progress=70]{T-14 Phase II report}{7}{8} \\
+\ganttbar[progress=100]{T-14 Obs.~1 and Obs.~2 fixes}{7}{8} \\
+\ganttbar[progress=80]{T-15 Phase II report}{7}{8} \\
 \ganttmilestone{Phase II review}{8} \\
 \ganttgroup{Planned}{9}{10} \\
-\ganttbar[progress=0]{T-15--T-24 next semester}{9}{10}
+\ganttbar[progress=0]{T-17--T-28 next semester}{9}{10}
 \end{ganttchart}}
 \caption{Timeline. Bar fill shows progress as of this report.}\label{fig:gantt}
 \end{figure}
 
 \begin{table}[H]\centering\caption{Module-wise plan for next semester.}
 \label{tab:next}\footnotesize
-\begin{tabularx}{\linewidth}{@{}C{0.9cm} C{1.1cm} X L{1.5cm}@{}}
+\begin{tabularx}{\linewidth}{@{}C{0.9cm} C{1.25cm} Y L{1.4cm}@{}}
 \toprule
 \textbf{Task} & \textbf{Module} & \textbf{Description} & \textbf{Target} \\
 \midrule
-\multicolumn{4}{@{}l}{\emph{Block A --- correctness first: no value extending a platform with known reporting defects}} \\
-T-15 & M9 & Correct the ablation split label, or re-evaluate the ablation checkpoints on the test split (Obs.~1) & Jan wk 1--2 \\
-T-16 & M9 & Clamp the evaluation crop parameter to crops available; report the effective value (Obs.~2) & Jan wk 2 \\
-T-17 & M3 & Compensating delete on post-storage failure; sweep for unreferenced files (Obs.~3) & Jan wk 2--3 \\
+\multicolumn{4}{@{}l}{\emph{Block A --- close the last correctness gap}} \\
+T-17 & M3 & Compensating delete on post-storage failure; sweep for unreferenced files (Obs.~3) & Jan wk 1 \\
 \multicolumn{4}{@{}l}{\emph{Block B --- test coverage}} \\
 T-18 & all & Unit tests for repository, report renderers, storage, auth; 70\% line coverage target & Jan--Feb \\
 T-19 & client & Component tests for upload flow, result screen, auth context & Feb \\
 T-20 & --- & CI pipeline: lint, type-check, both suites on every push & Feb wk 2 \\
 \multicolumn{4}{@{}l}{\emph{Block C --- scalability and operations}} \\
-T-21 & M4 & Asynchronous job path (submit returns a job id), justified by the 4.4\,s mean and 14\,s worst case in Table~\ref{tab:lat} & Feb--Mar \\
-T-22 & M3, M4 & Profile and optimise feature extraction --- 96.8\% of request time & Mar \\
-T-23 & --- & Application container and single-command compose stack; register the engine repository properly & Mar \\
+T-21 & M4 & Asynchronous job path (submit returns a job id), justified by the 4.2\,s mean and 13\,s worst case in Table~\ref{tab:lat} & Feb--Mar \\
+T-22 & M3, M4 & Profile and optimise feature extraction --- 97.3\% of request time & Mar \\
+T-23 & --- & Application container and single-command compose stack; Postgres deployment so data is persistent (Obs.~E); register the engine repository properly & Mar \\
 \multicolumn{4}{@{}l}{\emph{Block D --- capability and evaluation}} \\
 T-24 & M7 & Viewer completion: amplitude scaling, stacked channels, montage re-referencing & Mar \\
 T-25 & M6 & Optional SHAP~\cite{lundberg2017} attribution view, visually separated from the genuine gates and labelled an approximation~\cite{rudin2019} & Mar--Apr \\
 T-26 & M2, M3 & EEG-BIDS conformant import/export~\cite{pernet2019} & Apr \\
-T-27 & --- & Usability study (5--8 domain users) against Nielsen's heuristics~\cite{nielsen1994} and the onboarding needs of~\cite{cai2019}; accessibility audit across all 14 screens & Apr \\
+T-27 & --- & Usability study (5--8 domain users) against Nielsen's heuristics~\cite{nielsen1994} and the onboarding needs of~\cite{cai2019}; accessibility audit across all 13 screens & Apr \\
 T-28 & --- & Security review, final report and demonstration & Apr--May \\
 \bottomrule
 \end{tabularx}
@@ -1011,6 +1137,10 @@ truth --- mitigated by visual separation and explicit labelling.
 \section{References}
 
 {\footnotesize
+% thebibliography emits its own \section*{References}; we already have a
+% numbered section heading, so swallow the internal one.
+\let\qsfeoldsection\section
+\renewcommand{\section}[2]{}
 \begin{thebibliography}{99}\setlength{\itemsep}{2pt}
 
 \bibitem{amershi2019} Amershi, S., Begel, A., Bird, C., DeLine, R., Gall, H., Kamar, E., Nagappan, N., Nushi, B., and Zimmermann, T. (2019). ``Software Engineering for Machine Learning: A Case Study.'' \emph{Proc. ICSE-SEIP}, IEEE, pp.~291--300.
@@ -1059,6 +1189,8 @@ truth --- mitigated by visual separation and explicit labelling.
 
 \bibitem{pgfgantt} Wielath, W., and Isemann, M. \emph{The pgfgantt Package}. CTAN. \url{https://ctan.org/pkg/pgfgantt}
 
+\bibitem{playwright} Microsoft. \emph{Playwright: browser automation library}. \url{https://playwright.dev/}
+
 \bibitem{postgresql} PostgreSQL Global Development Group. \emph{PostgreSQL 16 Documentation}. \url{https://www.postgresql.org/docs/16/}
 
 \bibitem{pydantic} Colvin, S., et al. \emph{Pydantic Documentation}. \url{https://docs.pydantic.dev/}
@@ -1103,6 +1235,7 @@ truth --- mitigated by visual separation and explicit labelling.
 
 \bibitem{vite} You, E., et al. \emph{Vite Documentation}. \url{https://vite.dev/}
 
-\end{thebibliography}}
+\end{thebibliography}
+\let\section\qsfeoldsection}
 
 \end{document}
