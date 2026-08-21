@@ -98,7 +98,7 @@ parsed from the file the training run wrote:
 | --- | --- |
 | Parameter count, stream dims, device | `/model/info` — read from the loaded checkpoint |
 | Test accuracy, macro F1, confusion matrix, per-class metrics | `/model/performance` — scores the CAUEEG test split with the active checkpoint |
-| Ablation table and finding | `/model/ablation` — parses `outputs/ablation/ablation_results.txt` |
+| Ablation table and finding (validation accuracy) | `/model/ablation` — parses `outputs/ablation/ablation_results.txt` |
 | Gate activations per class | Averaged over the analyses in the workspace |
 | Biomarkers | Decoded from the feature vectors of each prediction |
 | Waveforms | Read from the source EDF, decimated for display |
@@ -108,7 +108,10 @@ checkpoints from **Settings → Checkpoints**.
 
 ### Model summary (`qsfe_npz_best.pth`)
 
-Measured through this server on the 118-patient CAUEEG test split, 5 crops each:
+Measured through this server on the 118-patient CAUEEG test split. The test
+split has one cached feature crop per patient, so each figure is a 1-crop
+result — `n_crops` is an upper bound, and `/model/performance` reports the
+number actually averaged:
 
 | Metric | Value |
 | --- | --- |
@@ -125,7 +128,11 @@ Gate weights describe **stream contribution**, not causal medical explanations.
 
 ### Ablation (from `ablation_results.txt`)
 
-| Configuration | Test accuracy |
+These are **validation** accuracies, not test. `src/train/ablation.py` builds only
+a train and a validation loader and returns `best_val_acc`; the test split is
+never touched. They are not comparable to the 53.39% test accuracy above.
+
+| Configuration | Validation accuracy |
 | --- | --- |
 | S1 only | 46.22% |
 | **S1 + S2** | **58.82%** |
@@ -133,9 +140,10 @@ Gate weights describe **stream contribution**, not causal medical explanations.
 | Full (S1–S4), gated | 55.46% |
 | Full, no gating | 55.46% |
 
-**S1 + S2 outperforms the full four-stream model.** At this dataset scale the
-entropy and asymmetry streams add more noise than signal — consistent with their
-low learned gate activations.
+**S1 + S2 outperforms the full four-stream model on validation.** At this dataset
+scale the entropy and asymmetry streams add more noise than signal — consistent
+with their low learned gate activations. Note 58.82% is exactly 70/119, the
+validation split size.
 
 ### Baselines (published, not measured here)
 

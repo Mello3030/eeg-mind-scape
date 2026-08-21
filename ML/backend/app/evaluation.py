@@ -82,6 +82,10 @@ def evaluate_split(split: str = "test", n_crops: int = 5, force: bool = False) -
 
     matrix = np.zeros((len(CLASS_NAMES), len(CLASS_NAMES)), dtype=np.int64)
     skipped = 0
+    # n_crops is a cap, not a promise: load_cached_features slices paths[:n_crops],
+    # so a split with one cached crop per patient averages one, not n_crops. Record
+    # what was actually used rather than what was asked for.
+    crops_used: set[int] = set()
     started = time.perf_counter()
 
     for record in records:
@@ -92,6 +96,7 @@ def evaluate_split(split: str = "test", n_crops: int = 5, force: bool = False) -
             continue
         try:
             streams = catalog.load_cached_features(serial, n_crops)
+            crops_used.add(int(next(iter(streams.values())).shape[0]))
             result = score(streams, model)
         except (ValueError, KeyError, OSError):
             skipped += 1
@@ -105,7 +110,10 @@ def evaluate_split(split: str = "test", n_crops: int = 5, force: bool = False) -
 
     payload = {
         "split": split,
-        "n_crops": n_crops,
+        "n_crops_requested": n_crops,
+        # One number when every patient had the same crop count, else the range.
+        "n_crops": min(crops_used) if len(crops_used) == 1 else sorted(crops_used),
+        "crops_uniform": len(crops_used) == 1,
         "checkpoint": model.checkpoint_path.name,
         "device": str(model.device),
         "n_parameters": model.n_parameters,

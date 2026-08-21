@@ -1,5 +1,10 @@
 """The ablation study, read from the file the training run actually wrote.
 
+These are **validation** accuracies. ``src/train/ablation.py`` builds only a
+train and a validation loader, and ``train_eval`` returns ``best_val_acc`` — the
+test split is never touched. They are labelled as such here so they are not read
+as comparable to the measured test accuracy from ``/model/performance``.
+
 `outputs/ablation/ablation_results.txt` is the only record of this experiment in
 the repository, so it is parsed rather than transcribed — the frontend used to
 carry a differently-numbered copy of this table with no traceable source.
@@ -44,20 +49,21 @@ def load_ablation() -> dict[str, Any]:
                 "key": key,
                 "config": meta["config"],
                 "streams": meta["streams"],
-                "test_accuracy": value,
+                "val_accuracy": value,
                 "checkpoint": f"{key}.pth",
             }
         )
 
-    best = max(rows, key=lambda r: r["test_accuracy"]) if rows else None
+    best = max(rows, key=lambda r: r["val_accuracy"]) if rows else None
     full = next((r for r in rows if r["key"] == "D_full_QSFE"), None)
     finding = None
     if best and full and best["key"] != "D_full_QSFE":
         finding = (
-            f"{best['config']} ({best['test_accuracy']:.2%}) outperforms the full "
-            f"four-stream model ({full['test_accuracy']:.2%}). At this dataset scale the "
+            f"{best['config']} ({best['val_accuracy']:.2%} validation) outperforms the full "
+            f"four-stream model ({full['val_accuracy']:.2%}). At this dataset scale the "
             "streams beyond frequency slowing and coherence contribute more noise than "
-            "signal, consistent with their low learned gate activations."
+            "signal, consistent with their low learned gate activations. These are "
+            "validation figures and are not comparable to the measured test accuracy."
         )
 
     for row in rows:
@@ -72,7 +78,8 @@ def load_ablation() -> dict[str, Any]:
 
 
 # Published comparisons on the same dataset. These are external results, not
-# measurements from this repository, and are labelled as such in the response.
+# measurements from this repository, and — unlike the ablation rows above — they
+# genuinely are test accuracies.
 BASELINES: list[dict[str, Any]] = [
     {"model": "CEEDNet Single", "params": 25_700_000, "params_label": "25.7M", "test_accuracy": 0.7732, "ours": False},
     {"model": "CEEDNet Ensemble", "params": 253_800_000, "params_label": "253.8M", "test_accuracy": 0.7916, "ours": False},

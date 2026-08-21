@@ -616,6 +616,10 @@ export interface ModelPerformance {
   macroF1: number;
   nEvaluated: number;
   elapsedSeconds: number;
+  /** Crops actually averaged per recording (a number, or a range when it varies). */
+  nCrops: number | number[];
+  nCropsRequested: number;
+  cropsUniform: boolean;
   perClass: Array<{
     label: ClassLabel;
     precision: number;
@@ -637,6 +641,9 @@ export async function modelPerformance(split = "test"): Promise<ModelPerformance
     macro_f1: number;
     n_evaluated: number;
     elapsed_seconds: number;
+    n_crops: number | number[];
+    n_crops_requested: number;
+    crops_uniform: boolean;
     per_class: ModelPerformance["perClass"];
   }>(`/model/performance${qs({ split })}`);
   return {
@@ -650,17 +657,22 @@ export async function modelPerformance(split = "test"): Promise<ModelPerformance
     macroF1: r.macro_f1,
     nEvaluated: r.n_evaluated,
     elapsedSeconds: r.elapsed_seconds,
+    nCrops: r.n_crops ?? r.n_crops_requested,
+    nCropsRequested: r.n_crops_requested,
+    cropsUniform: r.crops_uniform ?? true,
     perClass: r.per_class,
   };
 }
 
 export interface Ablation {
   available: boolean;
+  /** Ablation rows carry VALIDATION accuracy — `src/train/ablation.py` never
+   *  touches the test split. Not comparable to `ModelPerformance.accuracy`. */
   rows: Array<{
     key: string;
     config: string;
     streams: string;
-    test_accuracy: number;
+    val_accuracy: number;
     best: boolean;
   }>;
   finding: string | null;

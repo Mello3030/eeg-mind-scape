@@ -127,7 +127,15 @@ function PerformancePage() {
               value={perf.nParameters.toLocaleString()}
               sub={`trainable · ${perf.device}`}
             />
-            <Kpi label="Crops averaged" value={perf.split === "test" ? 5 : 5} sub="per recording" />
+            <Kpi
+              label="Crops averaged"
+              value={Array.isArray(perf.nCrops) ? perf.nCrops.join("–") : perf.nCrops}
+              sub={
+                perf.nCropsRequested !== perf.nCrops
+                  ? `per recording · ${perf.nCropsRequested} requested`
+                  : "per recording"
+              }
+            />
             <Kpi label="Chance level" value="33.3%" sub="three balanced classes" />
           </div>
 
@@ -263,7 +271,7 @@ function PerformancePage() {
         <Panel
           className="mt-3"
           title="Ablation study"
-          hint="Stream subsets trained under identical settings"
+          hint="Stream subsets trained under identical settings — validation accuracy, not test"
         >
           <div className="grid gap-3 xl:grid-cols-[1.1fr_1fr]">
             <div className="h-64">
@@ -282,8 +290,8 @@ function PerformancePage() {
                   <Tooltip formatter={(v: number) => pct(v)} contentStyle={tooltipStyle} />
                   <Bar
                     isAnimationActive={false}
-                    dataKey="test_accuracy"
-                    name="test accuracy"
+                    dataKey="val_accuracy"
+                    name="validation accuracy"
                     radius={[2, 2, 0, 0]}
                   >
                     {ablation.rows.map((r) => (
@@ -309,7 +317,7 @@ function PerformancePage() {
                     <tr>
                       <th className="py-1.5 pr-2 font-medium">Configuration</th>
                       <th className="py-1.5 pr-2 font-medium">Streams</th>
-                      <th className="py-1.5 font-medium">Test acc</th>
+                      <th className="py-1.5 font-medium">Val acc</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -320,7 +328,7 @@ function PerformancePage() {
                       >
                         <td className="py-1.5 pr-2">{r.config}</td>
                         <td className="py-1.5 pr-2 text-muted-foreground">{r.streams}</td>
-                        <td className="num py-1.5">{pct(r.test_accuracy)}</td>
+                        <td className="num py-1.5">{pct(r.val_accuracy)}</td>
                       </tr>
                     ))}
                   </tbody>
