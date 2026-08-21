@@ -5,6 +5,7 @@ import {
   apiMe,
   apiRegister,
   getToken,
+  onUnauthorized,
   setToken,
   type Role,
   type SessionUser,
@@ -51,6 +52,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  // A token can expire (12h) or be revoked mid-session. When the API rejects it,
+  // drop the session here too so the route guard redirects instead of leaving a
+  // fully rendered page whose every request fails.
+  useEffect(
+    () =>
+      onUnauthorized(() => {
+        setUser(null);
+        queryClient.clear();
+      }),
+    [queryClient],
+  );
 
   const value = useMemo<AuthValue>(
     () => ({

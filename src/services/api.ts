@@ -28,6 +28,22 @@ export const setToken = (token: string | null) => {
   else window.localStorage.removeItem(TOKEN_KEY);
 };
 
+/**
+ * Notified when the API rejects our token.
+ *
+ * Clearing localStorage is not enough on its own: AuthContext holds `user` in
+ * React state, so without this the session looks alive, the route guard lets the
+ * page render, and every panel fails quietly. Subscribers drop their session and
+ * the guard redirects.
+ */
+type UnauthorizedHandler = () => void;
+const unauthorizedHandlers = new Set<UnauthorizedHandler>();
+
+export function onUnauthorized(handler: UnauthorizedHandler): () => void {
+  unauthorizedHandlers.add(handler);
+  return () => unauthorizedHandlers.delete(handler);
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -64,7 +80,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
 
-  if (res.status === 401) setToken(null);
+  if (res.status === 401) {
+    setToken(null);
+    for (const handler of unauthorizedHandlers) handler();
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new ApiError(readDetail(body, res.status), res.status);

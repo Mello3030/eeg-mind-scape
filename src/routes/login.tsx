@@ -1,7 +1,8 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Brain } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { apiHealth } from "@/services/api";
 
 export const Route = createFileRoute("/login")({
   // Set by the shell's guard when an unauthenticated visitor asks for a page.
@@ -32,6 +33,8 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const server = useServerWake();
+
   // Landing here with a live session is a dead end otherwise.
   useEffect(() => {
     if (user) navigate({ to: target });
@@ -60,11 +63,13 @@ function LoginPage() {
         {error && <p className="text-[11px] text-destructive">{error}</p>}
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || server.state === "cold" || server.state === "waking"}
           className="w-full rounded-control bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>
+
+        <ServerWakePanel server={server} />
         <p className="text-[11px] text-muted-foreground">
           No account?{" "}
           <Link to="/register" className="text-primary hover:underline">
@@ -183,5 +188,124 @@ export function Field({
         className="mt-1.5 w-full rounded-control border border-input bg-card px-3 py-2 text-xs outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
       />
     </label>
+  );
+}
+
+/* --------------------------- server wake-up --------------------------- */
+
+/** Seconds the countdown starts from — a cold Render instance measured ~44s. */
+const WAKE_SECONDS = 60;
+
+type WakeState = "checking" | "ready" | "cold" | "waking" | "timeout";
+
+/**
+ * The API runs on a free Render instance that sleeps after ~15 minutes idle and
+ * takes roughly 45 seconds to wake. Signing in against a sleeping server just
+ * hangs, so probe on mount and let the user start the wake-up explicitly.
+ */
+function useServerWake() {
+  const [state, setState] = useState<WakeState>("checking");
+  const [remaining, setRemaining] = useState(WAKE_SECONDS);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopTimer = useCallback(() => {
+    if (timer.current) {
+      clearInterval(timer.current);
+      timer.current = null;
+    }
+  }, []);
+
+  // A quick probe: a warm server answers in well under a second, so anything
+  // slower is treated as asleep rather than blocking the form.
+  useEffect(() => {
+    let cancelled = false;
+    const settle = (next: WakeState) => {
+      if (!cancelled) setState(next);
+    };
+    const slow = setTimeout(() => settle("cold"), 3000);
+    apiHealth()
+      .then(() => {
+        clearTimeout(slow);
+        settle("ready");
+      })
+      .catch(() => {
+        clearTimeout(slow);
+        settle("cold");
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(slow);
+    };
+  }, []);
+
+  useEffect(() => stopTimer, [stopTimer]);
+
+  const wake = useCallback(() => {
+    setState("waking");
+    setRemaining(WAKE_SECONDS);
+    stopTimer();
+    timer.current = setInterval(() => {
+      setRemaining((n) => {
+        if (n <= 1) {
+          stopTimer();
+          // The request may still be in flight; offer a retry rather than
+          // claiming failure.
+          setState((cur) => (cur === "waking" ? "timeout" : cur));
+          return 0;
+        }
+        return n - 1;
+      });
+    }, 1000);
+
+    // Resolve as soon as the server answers, without waiting out the countdown.
+    apiHealth()
+      .then(() => {
+        stopTimer();
+        setState("ready");
+      })
+      .catch(() => {
+        stopTimer();
+        setState("timeout");
+      });
+  }, [stopTimer]);
+
+  return { state, remaining, wake };
+}
+
+function ServerWakePanel({ server }: { server: ReturnType<typeof useServerWake> }) {
+  const { state, remaining, wake } = server;
+  if (state === "checking" || state === "ready") return null;
+
+  return (
+    <div className="rounded-control border border-border bg-surface px-3 py-2.5">
+      <div className="label-xs">Server asleep</div>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+        {state === "waking"
+          ? "Waking the API. This takes about a minute on the free tier."
+          : state === "timeout"
+            ? "Still waking. Give it another moment, then try again."
+            : "The API sleeps after inactivity. Wake it before signing in."}
+      </p>
+
+      {state === "waking" ? (
+        <div className="mt-2.5">
+          <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-1000 ease-linear"
+              style={{ width: `${((WAKE_SECONDS - remaining) / WAKE_SECONDS) * 100}%` }}
+            />
+          </div>
+          <div className="num mt-1.5 text-[11px] text-muted-foreground">{remaining}s</div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={wake}
+          className="mt-2.5 w-full rounded-control border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-secondary"
+        >
+          {state === "timeout" ? "Try again" : "Wake server"}
+        </button>
+      )}
+    </div>
   );
 }

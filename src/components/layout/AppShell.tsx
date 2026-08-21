@@ -93,8 +93,12 @@ export function AppShell({
   const { data: health, isError: apiOffline } = useQuery({
     queryKey: ["health"],
     queryFn: apiHealth,
-    staleTime: 30_000,
-    refetchInterval: 30_000,
+    // The API sleeps on Render's free tier and takes ~45s to wake, so a tight
+    // poll wastes instance hours and keeps re-triggering the wake-up. Poll
+    // slowly, and not at all while the tab is in the background.
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
     retry: false,
   });
   const { data: model } = useQuery({
@@ -275,7 +279,7 @@ export function AppShell({
             )}
             {apiOffline && (
               <span className="num rounded-xs border border-dementia/40 bg-dementia/10 px-1.5 py-0.5 text-[10px] font-medium text-foreground">
-                API unreachable · start the server (see README)
+                API not responding · it may be waking up, or not running
               </span>
             )}
           </div>
